@@ -1,74 +1,121 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
+import { getSettings } from './settingsService';
 
-// Strict Keyword Extraction Prompt
-const KEYWORD_EXTRACTION_INSTRUCTION = `Role: Text Pattern Matcher / Keyword Extractor.
+// Built-in Defaults (SiliconFlow)
+const BUILTIN_KEY = "sk-ctqddhrdjhvogmcyvdhoiookeasolhdnhclebxkbnzauswzh";
+const BUILTIN_ENDPOINT = "https://api.siliconflow.cn/v1/chat/completions";
+// BUILTIN_MODEL is now dynamic based on settings, but we keep a fallback constant
+const DEFAULT_BUILTIN_MODEL = "Qwen/Qwen3-8B";
 
-Task:
-You will receive a raw input string. 
-Your ONLY job is to identify and list specific substrings (Nouns, Pronouns, Anchors) exactly as they appear in the input.
+const SYSTEM_PROMPT = `You are a linguistic expert.
+Please extract all **Nouns** (Common & Proper), **Pronouns**, and **Numerals** from the user input.
+Output strictly valid JSON with the format: {"keywords": ["term1", "term2", ...]}.
+Do NOT extract verbs, adjectives, adverbs, particles, or punctuation.
 
-CRITICAL RULES:
-1. **NO TRANSLATION**: Do not translate "功能" to "機能". Do not translate "逻辑" to "論理".
-2. **NO CORRECTION**: Do not fix typos. Do not convert Traditional/Simplified Chinese.
-3. **EXACT SUBSTRING MATCH**: The output keywords MUST exist literally in the input string.
-4. **EXCLUSION**: Do NOT include English words, numbers, or punctuation in the list.
+Example Input: "这是一个非常棒的UI改进方向"
+Output: {"keywords": ["这", "一", "UI", "改进", "方向"]}
 
-Target Patterns to Extract:
-1. Nouns (Common & Proper) e.g. "学校", "飯", "香港"
-2. Personal Pronouns e.g. "我", "你", "佢"
-3. Idioms e.g. "一石二鳥"
-
-Input: "我明日去学校食飯"
-Output: ["我", "明日", "学校", "飯"]
-
-Input: "功能强大的逻辑"
-Output: ["功能", "逻辑"]
-(Do NOT output "機能", Do NOT output "邏輯")
-`;
+Example Input: "张三去香港食咗饭"
+Output: {"keywords": ["张三", "香港", "饭"]}`;
 
 export const extractPreservedTerms = async (inputText: string): Promise<string[]> => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) throw new Error("API Key missing");
+  // If input is empty, return empty
+  if (!inputText || !inputText.trim()) return [];
 
-  const ai = new GoogleGenAI({ apiKey });
-  
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: `Input Text: "${inputText}"`, // Send RAW text
-    config: {
-      systemInstruction: KEYWORD_EXTRACTION_INSTRUCTION,
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          keywords: { 
-            type: Type.ARRAY,
-            items: { type: Type.STRING }
-          }
-        }
-      }
-    }
-  });
-
-  let jsonText = response.text;
-  
-  if (!jsonText) throw new Error("Empty AI response received");
-
-  // Basic cleanup
-  jsonText = jsonText.trim();
-  if (jsonText.startsWith("```json")) {
-    jsonText = jsonText.replace(/^```json/, "").replace(/```$/, "");
-  }
+  const settings = getSettings();
 
   try {
-    const data = JSON.parse(jsonText);
-    if (!data || !Array.isArray(data.keywords)) {
-        return [];
+    if (settings.provider === 'GEMINI') {
+      return await extractWithGemini(inputText, settings.geminiKey, settings.geminiModel);
+    } else {
+      // OpenAI Compatible (Built-in or Custom)
+      const isCustom = settings.provider === 'OPENAI';
+      const apiKey = isCustom ? settings.openaiKey : BUILTIN_KEY;
+      const endpoint = isCustom ? settings.openaiBaseUrl : BUILTIN_ENDPOINT;
+      const model = isCustom ? settings.openaiModel : (settings.builtinModel || DEFAULT_BUILTIN_MODEL);
+
+      return await extractWithOpenAI(inputText, apiKey, endpoint, model);
     }
-    return data.keywords;
-  } catch (e) {
-    console.error("JSON Parse Error:", e, "Raw Text:", jsonText);
-    return []; 
+  } catch (error) {
+    console.error("AI Service Error:", error);
+    return [];
   }
+};
+
+const parseResponse = (content: string, originalText: string): string[] => {
+    // Clean up content (remove markdown backticks if present)
+    content = content.replace(/```json/g, "").replace(/```/g, "").trim();
+
+    try {
+        const parsed = JSON.parse(content);
+        if (parsed && Array.isArray(parsed.keywords)) {
+            return parsed.keywords.filter((k: string) => originalText.includes(k));
+        } else if (Array.isArray(parsed)) {
+            return parsed.filter((k: any) => typeof k === 'string' && originalText.includes(k));
+        }
+    } catch (parseError) {
+        console.warn("JSON Parse Failed, trying simplified extraction", parseError, content);
+        const matches = content.match(/"([^"]+)"/g);
+        if (matches) {
+            return matches.map(m => m.replace(/"/g, '')).filter(k => originalText.includes(k));
+        }
+    }
+    return [];
+};
+
+const extractWithOpenAI = async (text: string, apiKey: string, endpoint: string, model: string): Promise<string[]> => {
+    if (!apiKey) throw new Error("Missing API Key");
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: text }
+        ],
+        temperature: 0, // Set to 0 for maximum stability
+        max_tokens: 512,
+        top_p: 1, // Standard for deterministic results
+        frequency_penalty: 0,
+        presence_penalty: 0
+      })
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API Error (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || "";
+    return parseResponse(content, text);
+};
+
+const extractWithGemini = async (text: string, apiKey: string, modelName: string): Promise<string[]> => {
+    if (!apiKey) throw new Error("Missing Gemini API Key");
+
+    const ai = new GoogleGenAI({ apiKey });
+    const model = ai.models.generateContent; 
+    
+    // Note: To match strict generic structure, we use generic generateContent
+    // but we need to create the client with the model in context or just call generic method
+    // The instructions say: ai.models.generateContent({ model: '...', contents: '...' })
+    
+    const response = await ai.models.generateContent({
+        model: modelName || 'gemini-2.5-flash',
+        contents: text,
+        config: {
+            systemInstruction: SYSTEM_PROMPT,
+            temperature: 0, // Set to 0 for maximum stability
+            responseMimeType: "application/json"
+        }
+    });
+
+    return parseResponse(response.text || "", text);
 };

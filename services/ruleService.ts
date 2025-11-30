@@ -2,7 +2,7 @@
 import { TranslationResult } from '../types';
 import { getJyutping } from './jyutpingService';
 import { convertToKana } from './kanaConverter';
-import { toShinjitai, initShinjitai } from './shinjitaiService';
+import { toShinjitai, initShinjitai, normalizeJapanesePunctuation } from './shinjitaiService';
 
 /**
  * Pure Phonetic Service (Non-AI)
@@ -19,7 +19,10 @@ export const convertRuleBased = async (inputText: string): Promise<TranslationRe
   // Ensure dictionaries are loaded
   await initShinjitai();
   
-  const chars = Array.from(inputText);
+  // 1. Normalize Punctuation globally first
+  const normalizedInput = normalizeJapanesePunctuation(inputText);
+
+  const chars = Array.from(normalizedInput);
   let zhengyuStr = "";
   let jyutpingStr = "";
   
@@ -40,7 +43,7 @@ export const convertRuleBased = async (inputText: string): Promise<TranslationRe
 
     if (jp === char) {
         // Not found in dictionary -> Keep original (Kanji Anchor by default if unknown)
-        // Convert to Shinjitai here as well for consistency
+        // Convert to Shinjitai here as well for consistency (in case Shinjitai lib has it but Jyutping dict doesn't)
         const shin = toShinjitai(char);
         zhengyuStr += shin;
         jyutpingStr += char + " ";

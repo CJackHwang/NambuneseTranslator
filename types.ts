@@ -1,4 +1,5 @@
 
+
 export interface TranslationResult {
   original: string;
   cantonese: string; // The AI generated intermediate step (keyword list or raw text)
@@ -7,6 +8,7 @@ export interface TranslationResult {
   fullKana?: string; // The full phonetic representation (Pure Kana)
   explanation?: string;
   engine?: 'RULE' | 'AI' | 'HYBRID';
+  aiError?: string; // Captures non-fatal AI errors (fallback mode triggered)
   segments?: {
     text: string;
     type: 'KANJI' | 'KANA';
@@ -32,3 +34,17 @@ export enum ConversionStatus {
 }
 
 export type TranslationEngine = 'RULE' | 'AI' | 'HYBRID';
+
+export type AIProvider = 'BUILTIN' | 'OPENAI' | 'GEMINI';
+
+export interface AISettings {
+  provider: AIProvider;
+  builtinModel: string;
+  // OpenAI Compatible
+  openaiBaseUrl: string;
+  openaiKey: string;
+  openaiModel: string;
+  // Gemini
+  geminiKey: string;
+  geminiModel: string;
+}

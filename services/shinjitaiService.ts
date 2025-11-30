@@ -96,3 +96,23 @@ export const toShinjitai = (text: string): string => {
       return char;
   }).join('');
 };
+
+/**
+ * Normalize Punctuation to Japanese Style
+ * e.g. ，-> 、 | “ -> 「 | ” -> 」
+ */
+export const normalizeJapanesePunctuation = (text: string): string => {
+  return text
+    .replace(/,/g, '、')
+    .replace(/，/g, '、')
+    .replace(/“/g, '「')
+    .replace(/”/g, '」')
+    .replace(/‘/g, '『')
+    .replace(/’/g, '』')
+    .replace(/\(/g, '（')
+    .replace(/\)/g, '）')
+    .replace(/!/g, '！')
+    .replace(/\?/g, '？')
+    .replace(/:/g, '：')
+    .replace(/;/g, '；');
+};

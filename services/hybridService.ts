@@ -1,6 +1,7 @@
 
+
 import { extractPreservedTerms } from './geminiService';
-import { toShinjitai, initShinjitai } from './shinjitaiService';
+import { toShinjitai, initShinjitai, normalizeJapanesePunctuation } from './shinjitaiService';
 import { getJyutping, initDictionary } from './jyutpingService';
 import { convertToKana } from './kanaConverter';
 import { TranslationResult } from '../types';
@@ -14,16 +15,20 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
   // Path A: Normalization
   // Convert original Input -> Shinjitai
   let normalizedText = toShinjitai(inputText);
-  // Map Punctuation: ， -> 、 (Standardize punctuation)
-  normalizedText = normalizedText.replace(/，/g, '、');
+  // Apply Punctuation Rules (Global Japanese Style)
+  normalizedText = normalizeJapanesePunctuation(normalizedText);
 
   // Path B: AI Extraction (On Original Text)
   // We send the ORIGINAL text to AI to ensure it sees the context correctly.
   let rawKeywords: string[] = [];
+  let aiErrorMsg: string | undefined = undefined;
+
   try {
     rawKeywords = await extractPreservedTerms(inputText);
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI Extraction failed", error);
+    // Capture the error message to display in UI
+    aiErrorMsg = error.message || "Unknown AI Service Error";
     rawKeywords = [];
   }
 
@@ -35,7 +40,8 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
   // Even if Input "逻辑" -> Shinjitai "論理" (hypothetically, if dictionary does that)
   // AI extracts "逻辑" -> Shinjitai "論理"
   // They match.
-  const normalizedKeywords = rawKeywords.map(k => toShinjitai(k));
+  // We also apply punctuation normalization to keywords just in case AI returned punctuation
+  const normalizedKeywords = rawKeywords.map(k => normalizeJapanesePunctuation(toShinjitai(k)));
 
   // Sort keywords by length (descending) to ensure greedy matching
   normalizedKeywords.sort((a, b) => b.length - a.length);
@@ -131,10 +137,11 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
     fullKana: fullKanaStr,
     explanation: "Hybrid Pipeline v5.1 (Raw AI Extraction + Unified Shinjitai Matching)",
     engine: 'HYBRID',
+    aiError: aiErrorMsg,
     segments: segments,
     processLog: {
       step1_raw_input: inputText,
-      step2_ai_extraction: JSON.stringify(rawKeywords),
+      step2_ai_extraction: aiErrorMsg ? `ERROR: ${aiErrorMsg}` : JSON.stringify(rawKeywords),
       step3_normalization_text: normalizedText,
       step4_normalization_keywords: JSON.stringify(normalizedKeywords),
       step5_segmentation: fullZhengyu,

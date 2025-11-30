@@ -1,6 +1,6 @@
 
 import { TranslationResult } from '../types';
-import { toShinjitai, initShinjitai } from './shinjitaiService';
+import { toShinjitai, initShinjitai, normalizeJapanesePunctuation } from './shinjitaiService';
 
 /**
  * Text Conversion Service
@@ -14,9 +14,8 @@ export const convertTextMode = async (inputText: string): Promise<TranslationRes
   // 1. Convert to Shinjitai
   let converted = toShinjitai(inputText);
 
-  // 2. Apply Punctuation Rules
-  // Chinese Comma (U+FF0C) -> Japanese Comma (U+3001)
-  converted = converted.replace(/，/g, '、');
+  // 2. Apply Punctuation Rules (Global Japanese Style)
+  converted = normalizeJapanesePunctuation(converted);
 
   return {
     original: inputText,
