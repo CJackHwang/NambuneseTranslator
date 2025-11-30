@@ -363,6 +363,24 @@ const Converter: React.FC = () => {
                        <div className="text-sm bg-teal-50 p-2 rounded border border-teal-100 font-mono text-teal-800 text-xs break-all">{result.processLog.step4_normalization_keywords}</div>
                    </div>
                 </div>
+
+                {/* Arrow Divider */}
+                <div className="flex justify-center">
+                    <svg className="text-gray-300" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+                </div>
+
+                {/* Step 3: Phonetic Processing */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <div>
+                       <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Intermediate Jyutping</div>
+                       <div className="text-sm bg-purple-50 p-2 rounded border border-purple-100 font-mono text-purple-800 text-xs break-all">{result.processLog.step6_jyutping_generation}</div>
+                   </div>
+                   <div>
+                       <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Full Kana Output</div>
+                       <div className="text-sm bg-indigo-50 p-2 rounded border border-indigo-100 font-jp text-indigo-800 text-xs break-all">{result.processLog.step7_full_kana_generation}</div>
+                   </div>
+                </div>
+
             </div>
         </div>
       )}

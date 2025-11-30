@@ -137,7 +137,9 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
       step2_ai_extraction: JSON.stringify(rawKeywords),
       step3_normalization_text: normalizedText,
       step4_normalization_keywords: JSON.stringify(normalizedKeywords),
-      step5_segmentation: fullZhengyu
+      step5_segmentation: fullZhengyu,
+      step6_jyutping_generation: fullJyutping.trim(),
+      step7_full_kana_generation: fullKanaStr
     }
   };
 };

@@ -19,6 +19,8 @@ export interface TranslationResult {
     step3_normalization_text: string; // Input converted to Shinjitai
     step4_normalization_keywords: string; // AI Keywords converted to Shinjitai
     step5_segmentation: string;   // Final matching result preview
+    step6_jyutping_generation: string; // The intermediate phonetic sequence
+    step7_full_kana_generation: string; // The pure kana calculation (for ruby/fallback)
   };
 }
 
