@@ -1,7 +1,7 @@
 
 export interface TranslationResult {
   original: string;
-  cantonese: string; // The AI generated intermediate step (with markers)
+  cantonese: string; // The AI generated intermediate step (keyword list or raw text)
   jyutping: string;
   zhengyu: string;
   explanation?: string;
@@ -9,6 +9,7 @@ export interface TranslationResult {
   segments?: {
     text: string;
     type: 'KANJI' | 'KANA';
+    reading?: string; // The Kana reading for Ruby display (only for KANJI type)
     source?: string; // jyutping source
   }[];
   processLog?: {

@@ -11,11 +11,10 @@ These words will be PRESERVED as Kanji. All other words (verbs, adjectives, part
 
 Extraction Rules (Add these to the list):
 1. Common Nouns (e.g. 学校, 飯, 時間, 世界)
-2. Proper Nouns (e.g. 香港, 田中, Google)
+2. Proper Nouns (e.g. 香港, 田中) - Chinese/Japanese names only.
 3. Personal Pronouns (e.g. 我, 你, 佢, 咱们)
 4. Numerals & Quantities (e.g. 一, 十, 百, 2025年)
 5. Idioms/Chengyu acting as nouns (e.g. 一石二鳥)
-6. Foreign terms/English words (e.g. Apple, iPhone, Bus)
 
 Exclusion Rules (DO NOT add these):
 1. Verbs (e.g. 食, 去, 有, 係, 跑) - Unless used as a noun.
@@ -23,6 +22,7 @@ Exclusion Rules (DO NOT add these):
 3. Adverbs (e.g. 都, 仲, 先, 非常)
 4. Particles (e.g. 咗, 緊, 嘅, 啊, 的, 了)
 5. Punctuation.
+6. **English/Latin Words** (e.g. Apple, iPhone, Bus) - Do NOT extract these. They must be handled physically by the system to prevent transliteration errors.
 
 Example 1:
 Input: "我明日去学校食飯"
@@ -34,7 +34,8 @@ Output: ["这个"]
 
 Example 3:
 Input: "I love Hong Kong"
-Output: ["I", "Hong Kong"]
+Output: ["Hong Kong"] 
+(Note: "I" and "love" are English, so they are excluded)
 `;
 
 export const extractPreservedTerms = async (inputText: string): Promise<string[]> => {

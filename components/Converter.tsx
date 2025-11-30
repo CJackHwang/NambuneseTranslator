@@ -221,48 +221,46 @@ const Converter: React.FC = () => {
                   </div>
               ) : result ? (
                   <div className="flex-1 flex flex-col gap-6 animate-fade-in-up">
-                      <div>
-                        <p className="text-3xl sm:text-4xl leading-normal font-jp font-medium text-md-onSurface break-words">
-                            {result.zhengyu}
-                        </p>
+                      <div className="text-3xl sm:text-4xl leading-relaxed font-jp font-medium text-md-onSurface break-words">
+                        {mode === 'HYBRID' && result.segments ? (
+                            <div className="flex flex-wrap items-baseline gap-y-2">
+                                {result.segments.map((seg, idx) => {
+                                    if (seg.type === 'KANJI' && seg.reading) {
+                                        return (
+                                            <ruby key={idx} className="mr-0.5">
+                                                {seg.text}
+                                                <rt className="text-[0.4em] text-md-secondary font-normal select-none">{seg.reading}</rt>
+                                            </ruby>
+                                        );
+                                    }
+                                    return <span key={idx}>{seg.text}</span>;
+                                })}
+                            </div>
+                        ) : (
+                            // Fallback or Pure/Text mode without Ruby segments
+                            result.zhengyu
+                        )}
                       </div>
                       
-                      {/* Secondary Info - Hide in Text Mode if Jyutping is empty */}
-                      {mode !== 'TEXT' && (
-                          <div className="mt-auto pt-6 border-t border-md-outlineVariant/20">
-                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
-                                <div>
-                                    <p className="text-sm font-mono text-md-secondary mb-1 tracking-tight">{result.jyutping}</p>
-                                    <p className="text-[10px] sm:text-xs text-md-outline/60 uppercase tracking-wide">
-                                        {mode === 'HYBRID' ? 'Nambu Standard v5.1 (AI)' : 'Transliteration Mode'}
-                                    </p>
-                                </div>
-                                <button 
-                                    onClick={() => {
-                                        navigator.clipboard.writeText(result.zhengyu);
-                                    }}
-                                    className="self-end sm:self-auto flex items-center gap-2 px-4 py-2 text-sm font-bold text-md-primary bg-md-primary/5 hover:bg-md-primary/10 border border-md-primary/10 rounded-full transition-colors group"
-                                >
-                                    <span>{t('copy')}</span>
-                                    <svg className="group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                                </button>
+                      {/* Secondary Info: Hide Jyutping in main view for Hybrid mode to reduce clutter */}
+                      <div className="mt-auto pt-6 border-t border-md-outlineVariant/20">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+                            <div>
+                                <p className="text-[10px] sm:text-xs text-md-outline/60 uppercase tracking-wide">
+                                    {mode === 'HYBRID' ? 'Nambu Standard v5.1 (Ruby Mode)' : mode === 'PURE' ? 'Transliteration Mode' : 'Text Conversion'}
+                                </p>
                             </div>
-                          </div>
-                      )}
-                      
-                      {mode === 'TEXT' && (
-                          <div className="mt-auto pt-6 border-t border-md-outlineVariant/20 flex justify-end">
-                                <button 
-                                    onClick={() => {
-                                        navigator.clipboard.writeText(result.zhengyu);
-                                    }}
-                                    className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-md-primary bg-md-primary/5 hover:bg-md-primary/10 border border-md-primary/10 rounded-full transition-colors group"
-                                >
-                                    <span>{t('copy')}</span>
-                                    <svg className="group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                                </button>
-                          </div>
-                      )}
+                            <button 
+                                onClick={() => {
+                                    navigator.clipboard.writeText(result.zhengyu);
+                                }}
+                                className="self-end sm:self-auto flex items-center gap-2 px-4 py-2 text-sm font-bold text-md-primary bg-md-primary/5 hover:bg-md-primary/10 border border-md-primary/10 rounded-full transition-colors group"
+                            >
+                                <span>{t('copy')}</span>
+                                <svg className="group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                            </button>
+                        </div>
+                      </div>
                   </div>
               ) : (
                   <div className="flex-1 flex items-center justify-center text-md-outline/30 select-none">
@@ -358,9 +356,10 @@ const Converter: React.FC = () => {
                         <div className="text-[10px] font-bold text-md-outline uppercase mb-2">{t('step2')}</div>
                         <div className="text-sm font-mono break-words whitespace-pre-wrap text-md-secondary">{result.processLog.step2_ai_tagging}</div>
                     </div>
+                    {/* Replaced Step 3 text log with the intermediate Jyutping log as requested by user to hide it from main view */}
                     <div className="p-3 bg-md-surface2 rounded-lg border border-md-outlineVariant/10">
-                        <div className="text-[10px] font-bold text-md-outline uppercase mb-2">{t('step3')}</div>
-                        <div className="text-sm font-jp break-words whitespace-pre-wrap text-md-primary font-medium">{result.processLog.step3_phonetic}</div>
+                        <div className="text-[10px] font-bold text-md-outline uppercase mb-2">Raw Jyutping (Ref)</div>
+                        <div className="text-sm font-mono break-words whitespace-pre-wrap text-md-primary font-medium">{result.jyutping}</div>
                     </div>
                 </div>
             )}

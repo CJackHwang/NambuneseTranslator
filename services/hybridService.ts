@@ -35,7 +35,7 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
   // 3. Punctuation (Keep)
   // 4. Everything else -> Kana
   
-  const segments: { text: string, type: 'KANJI' | 'KANA', source?: string }[] = [];
+  const segments: { text: string, type: 'KANJI' | 'KANA', reading?: string, source?: string }[] = [];
   let fullJyutping = "";
   let fullZhengyu = "";
 
@@ -55,13 +55,25 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
 
     if (match) {
       // === KANJI SEGMENT (Matched Keyword) ===
-      segments.push({ text: match, type: 'KANJI' });
-      fullZhengyu += match;
-
-      // Get Jyutping for reference (even if kept as Kanji)
-      // Note: If the match is English, getJyutping usually returns it as-is
+      
+      // Get Jyutping for reference 
       const jpArray = await getJyutping(match);
-      fullJyutping += jpArray.join(' ') + " ";
+      const jpString = jpArray.join(' ');
+      fullJyutping += jpString + " ";
+
+      // Generate Reading for Ruby (Convert the Jyutping of the Kanji to Kana)
+      // We need to convert word-by-word or char-by-char for the reading
+      let reading = "";
+      for(const p of jpArray) {
+        reading += convertToKana(p);
+      }
+
+      segments.push({ 
+        text: match, 
+        type: 'KANJI', 
+        reading: reading 
+      });
+      fullZhengyu += match;
 
       // Advance index by length of match
       i += match.length;
@@ -73,11 +85,10 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
       // If valid ASCII (letters, numbers), preserve it. 
       // Do NOT send 'a' to kana converter, or it becomes 'あ'.
       // Range: 0-9, A-Z, a-z. 
-      // Note: Punctuation is handled in the next block usually, but ASCII punctuation is safe here too.
       if (/[a-zA-Z0-9]/.test(char)) {
-         segments.push({ text: char, type: 'KANJI' }); // Treat as 'KANJI' layer (preserved)
+         segments.push({ text: char, type: 'KANJI' }); // No reading provided for ASCII
          fullZhengyu += char;
-         fullJyutping += char; // No space for English usually, or add if needed
+         fullJyutping += char; 
          i++;
          continue;
       }
@@ -112,7 +123,7 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
     cantonese: JSON.stringify(preservedKeywords), // Log the keywords found
     jyutping: fullJyutping.trim(),
     zhengyu: fullZhengyu,
-    explanation: "Hybrid Pipeline v5.1 (Keyword List + English Protection)",
+    explanation: "Hybrid Pipeline v5.1 (Keyword List + Ruby Rendering)",
     engine: 'HYBRID',
     segments: segments,
     processLog: {
