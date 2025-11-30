@@ -2,7 +2,7 @@
 import { TranslationResult } from '../types';
 import { getJyutping } from './jyutpingService';
 import { convertToKana } from './kanaConverter';
-import { toShinjitai } from './shinjitaiService';
+import { toShinjitai, initShinjitai } from './shinjitaiService';
 
 /**
  * Pure Phonetic Service (Non-AI)
@@ -16,17 +16,8 @@ import { toShinjitai } from './shinjitaiService';
  */
 
 export const convertRuleBased = async (inputText: string): Promise<TranslationResult> => {
-  // Ensure dictionary is loaded (handled by getJyutping internally, but good to be safe)
-  
-  // 1. Optional: Convert input to Shinjitai first? 
-  // Actually, since we are going to Kana, Shinjitai is less relevant for the final output 
-  // unless we fail to find a reading. But let's keep visual consistency.
-  // The LSHK dictionary uses Traditional Chinese keys. 
-  // Converting to Shinjitai might break lookup if Shinjitai != Traditional.
-  // So we keep input as is for lookup, or convert Simp->Trad if possible.
-  // Assuming input is Mandarin (Simp/Trad). LSHK is Trad.
-  // We don't have a Simp->Trad converter here. 
-  // We will rely on the input matching the dictionary keys.
+  // Ensure dictionaries are loaded
+  await initShinjitai();
   
   const chars = Array.from(inputText);
   let zhengyuStr = "";
@@ -49,6 +40,7 @@ export const convertRuleBased = async (inputText: string): Promise<TranslationRe
 
     if (jp === char) {
         // Not found in dictionary -> Keep original (Kanji Anchor by default if unknown)
+        // Convert to Shinjitai here as well for consistency
         const shin = toShinjitai(char);
         zhengyuStr += shin;
         jyutpingStr += char + " ";

@@ -11,6 +11,11 @@ export interface TranslationResult {
     type: 'KANJI' | 'KANA';
     source?: string; // jyutping source
   }[];
+  processLog?: {
+    step1_normalization: string;
+    step2_ai_tagging: string;
+    step3_phonetic: string;
+  };
 }
 
 export enum ConversionStatus {

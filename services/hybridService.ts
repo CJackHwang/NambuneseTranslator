@@ -1,25 +1,27 @@
 
 import { convertHybridTagging } from './geminiService';
-import { toShinjitai } from './shinjitaiService';
+import { toShinjitai, initShinjitai } from './shinjitaiService';
 import { getJyutping, initDictionary } from './jyutpingService';
 import { convertToKana } from './kanaConverter';
 import { TranslationResult } from '../types';
 
 export const convertHybrid = async (inputText: string): Promise<TranslationResult> => {
-  // Step 0: Ensure Dictionary is Loaded
-  const dictPromise = initDictionary();
+  // Step 0: Ensure Dictionaries are Loaded
+  await Promise.all([initDictionary(), initShinjitai()]);
 
-  // Step 1: AI Tagging (Mandarin -> Marked Cantonese)
-  const aiPromise = convertHybridTagging(inputText);
+  // === STEP 1: Pre-processing (Normalization) ===
+  // Convert Hanzi -> Shinjitai locally
+  let preProcessed = toShinjitai(inputText);
+  // Map Punctuation: ， -> 、
+  preProcessed = preProcessed.replace(/，/g, '、');
 
-  // Wait for both
-  const [_, taggedText] = await Promise.all([dictPromise, aiPromise]);
+  // === STEP 2: AI Tagging ===
+  // Send the normalized text to AI for strictly structural tagging
+  let taggedText = await convertHybridTagging(preProcessed);
+
+  // === STEP 3: Phonetic Conversion ===
+  // Parse tags and convert raw segments to Kana
   
-  // Step 2: Parse and Process
-  // Regex matches: {Kanji} OR [Katakana] OR Text
-  // Group 1: {Kanji}
-  // Group 2: [Katakana]
-  // Group 3: Other Text
   const regex = /\{([^}]+)\}|\[([^\]]+)\]|([^{}[\]]+)/g;
   let match;
   const segments: { text: string, type: 'KANJI' | 'KANA', source?: string }[] = [];
@@ -30,42 +32,40 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
   while ((match = regex.exec(taggedText)) !== null) {
     if (match[1]) {
       // === KANJI SEGMENT (Inside {}) ===
+      // AI marked this as Noun/Anchor. Keep as is.
       const content = match[1];
-      const shinjitai = toShinjitai(content);
       
-      segments.push({ text: shinjitai, type: 'KANJI' });
+      segments.push({ text: content, type: 'KANJI' });
+      fullZhengyu += content;
       
-      fullZhengyu += shinjitai;
-      
-      // Get Jyutping for Kanji parts (for display purposes)
+      // Get Jyutping for Kanji parts (for display/reference)
       const jpArray = await getJyutping(content);
       const jp = jpArray.join(' ');
       fullJyutping += jp + " ";
 
     } else if (match[2]) {
-      // === KATAKANA SEGMENT (Inside []) ===
-      // AI already converted this to Katakana, e.g. [アップル]
+      // === FOREIGN SEGMENT (Inside []) ===
+      // AI marked this as Foreign/Katakana. Keep as is.
       const content = match[2];
       
       segments.push({ text: content, type: 'KANA', source: 'Foreign' });
-      
       fullZhengyu += content;
-      fullJyutping += content + " "; // No Jyutping for raw Katakana
+      fullJyutping += content + " ";
 
     } else if (match[3]) {
-      // === KANA SEGMENT (Normal Cantonese to convert) ===
+      // === RAW SEGMENT (Outside tags) ===
+      // AI marked this as Verb/Adj/Function Word. Convert to Kana.
       const content = match[3];
       
-      // 1. Convert to Jyutping (Async)
-      const jpArray = await getJyutping(content); // e.g. ['heoi3']
+      // 1. Convert to Jyutping
+      const jpArray = await getJyutping(content);
       
-      // 2. Convert each char's Jyutping to Kana
+      // 2. Convert to Kana
       let kanaSegment = "";
       let jpSegment = "";
       
       for (let i = 0; i < jpArray.length; i++) {
         const jp = jpArray[i];
-        // If jp is still a chinese char (lookup failed), convertToKana will just return it
         const kana = convertToKana(jp);
         kanaSegment += kana;
         jpSegment += jp + " ";
@@ -79,11 +79,16 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
 
   return {
     original: inputText,
-    cantonese: taggedText, 
+    cantonese: taggedText, // Using this field to store the tagged version
     jyutping: fullJyutping.trim(),
     zhengyu: fullZhengyu,
-    explanation: "Hybrid Process v5.1: AI handles Noun Anchors and English-to-Katakana conversion. Real-time dictionary handles Phonetic Kana.",
+    explanation: "Hybrid Pipeline v5.1",
     engine: 'HYBRID',
-    segments: segments
+    segments: segments,
+    processLog: {
+      step1_normalization: preProcessed,
+      step2_ai_tagging: taggedText,
+      step3_phonetic: fullZhengyu
+    }
   };
 };

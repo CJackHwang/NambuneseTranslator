@@ -1,4 +1,5 @@
 
+
 export type Language = 'en' | 'zh' | 'ja';
 
 export const TRANSLATIONS = {
@@ -11,6 +12,7 @@ export const TRANSLATIONS = {
     chars: "chars",
     modeHybrid: "AI Hybrid",
     modePure: "Transliteration",
+    modeText: "Text Conv.",
     instant: "Instant",
     convert: "Convert",
     copy: "Copy",
@@ -23,11 +25,17 @@ export const TRANSLATIONS = {
     phoneticKanaDesc: "Verbs, adjectives, and particles are phonetically transcribed into Hiragana based on Cantonese pronunciation.",
     transliterationTitle: "Transliteration Mode",
     transliterationDesc: "Strict character-to-sound conversion for Chinese characters. Does not translate meaning.",
+    textConversionTitle: "Text Conversion",
+    textConversionDesc: "Directly converts Chinese characters (Simplified/Traditional) to Japanese Shinjitai and maps standard Chinese punctuation (e.g. ，→、).",
     footerDept: "Nambu Democratic Republic Dept. of Propaganda & Education.",
     footerStandard: "Standard v5.1 (Revised Edition)",
     resourcesLoading: "Loading Resources...",
     retry: "Retry",
-    resultLabel: "Nambunese (v5.1)"
+    resultLabel: "Nambunese (v5.1)",
+    processDetails: "Process Details",
+    step1: "1. Normalization (Shinjitai)",
+    step2: "2. AI Analysis (Tagging)",
+    step3: "3. Phonetic Conversion"
   },
   zh: {
     title: "南武官方正语翻译器",
@@ -38,6 +46,7 @@ export const TRANSLATIONS = {
     chars: "字数",
     modeHybrid: "AI 混合模式",
     modePure: "纯注音模式",
+    modeText: "文本转换",
     instant: "即时",
     convert: "转换",
     copy: "复制",
@@ -50,11 +59,17 @@ export const TRANSLATIONS = {
     phoneticKanaDesc: "动词、形容词和助词根据粤语发音音译为平假名。",
     transliterationTitle: "注音模式",
     transliterationDesc: "针对汉字的纯语音转换模式（不做语义翻译），适合学习发音。",
+    textConversionTitle: "文本转换模式",
+    textConversionDesc: "将中文汉字（简/繁）直接转换为日本新字体，并自动转换标点符号（如 ，→、）。",
     footerDept: "南武民主共和国宣传教育部",
     footerStandard: "正语日新标 v5.1 (修订版)",
     resourcesLoading: "正在加载资源...",
     retry: "重试",
-    resultLabel: "南武正语 (v5.1)"
+    resultLabel: "南武正语 (v5.1)",
+    processDetails: "处理明细",
+    step1: "1. 预处理 (新字体转换)",
+    step2: "2. AI 词性标记",
+    step3: "3. 假名注音转换"
   },
   ja: {
     title: "南武公式ナンブ語翻訳機",
@@ -65,6 +80,7 @@ export const TRANSLATIONS = {
     chars: "文字",
     modeHybrid: "AIハイブリッド",
     modePure: "音訳モード",
+    modeText: "テキスト変換",
     instant: "リアルタイム",
     convert: "変換",
     copy: "コピー",
@@ -77,10 +93,16 @@ export const TRANSLATIONS = {
     phoneticKanaDesc: "動詞、形容詞、助詞は、広東語の発音に基づいて平仮名に音訳されます。",
     transliterationTitle: "音訳モード",
     transliterationDesc: "漢字の厳密な音声変換モードです。意味の翻訳は行いません。",
+    textConversionTitle: "テキスト変換モード",
+    textConversionDesc: "中国語（簡体字/繁体字）を日本の新字体に直接変換し、句読点（，→、）を自動的に調整します。",
     footerDept: "南武民主共和国 宣伝教育部",
     footerStandard: "標準 v5.1 (改訂版)",
     resourcesLoading: "リソースを読み込んでいます...",
     retry: "再試行",
-    resultLabel: "南武語 (v5.1)"
+    resultLabel: "南武語 (v5.1)",
+    processDetails: "処理詳細",
+    step1: "1. 正規化 (新字体)",
+    step2: "2. AI タギング",
+    step3: "3. 音声変換"
   }
 };

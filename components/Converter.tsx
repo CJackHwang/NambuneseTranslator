@@ -2,7 +2,9 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { convertHybrid } from '../services/hybridService';
 import { convertRuleBased } from '../services/ruleService';
+import { convertTextMode } from '../services/textConversionService';
 import { initDictionary } from '../services/jyutpingService';
+import { initShinjitai } from '../services/shinjitaiService';
 import { TranslationResult, ConversionStatus } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -12,25 +14,26 @@ const Converter: React.FC = () => {
   const [result, setResult] = useState<TranslationResult | null>(null);
   const [status, setStatus] = useState<ConversionStatus>(ConversionStatus.IDLE);
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<'HYBRID' | 'PURE'>('HYBRID');
+  const [mode, setMode] = useState<'HYBRID' | 'PURE' | 'TEXT'>('HYBRID');
   const [isRealTime, setIsRealTime] = useState(false);
-  const [isDictReady, setIsDictReady] = useState(false);
+  const [areResourcesReady, setAreResourcesReady] = useState(false);
   const [dictLoadingError, setDictLoadingError] = useState<string | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
 
   const debounceTimeoutRef = useRef<number | null>(null);
 
-  // Initialize Dictionary on Mount
+  // Initialize Dictionaries on Mount
   useEffect(() => {
-    const loadDict = async () => {
+    const loadResources = async () => {
       try {
-        await initDictionary();
-        setIsDictReady(true);
+        await Promise.all([initDictionary(), initShinjitai()]);
+        setAreResourcesReady(true);
       } catch (err: any) {
-        console.error("Dictionary initialization failed", err);
-        setDictLoadingError("Failed to load dictionary.");
+        console.error("Resources initialization failed", err);
+        setDictLoadingError("Failed to load dictionaries.");
       }
     };
-    loadDict();
+    loadResources();
   }, []);
 
   const handleConvert = useCallback(async (textToConvert: string) => {
@@ -39,7 +42,7 @@ const Converter: React.FC = () => {
         setStatus(ConversionStatus.IDLE);
         return;
     }
-    if (!isDictReady) return;
+    if (!areResourcesReady) return;
     
     setStatus(ConversionStatus.LOADING);
     setError(null);
@@ -49,8 +52,10 @@ const Converter: React.FC = () => {
       
       if (mode === 'HYBRID') {
         data = await convertHybrid(textToConvert);
-      } else {
+      } else if (mode === 'PURE') {
         data = await convertRuleBased(textToConvert);
+      } else {
+        data = await convertTextMode(textToConvert);
       }
       
       setResult(data);
@@ -61,11 +66,11 @@ const Converter: React.FC = () => {
       let msg = err?.message || "Unknown error occurred";
       setError(msg);
     }
-  }, [mode, isDictReady]);
+  }, [mode, areResourcesReady]);
 
   // Real-time Translation Effect
   useEffect(() => {
-    if (!isRealTime || mode !== 'PURE') return;
+    if (!isRealTime || mode === 'HYBRID') return;
 
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
@@ -88,8 +93,8 @@ const Converter: React.FC = () => {
   const retryDictLoad = async () => {
       setDictLoadingError(null);
       try {
-          await initDictionary();
-          setIsDictReady(true);
+          await Promise.all([initDictionary(), initShinjitai()]);
+          setAreResourcesReady(true);
       } catch (e) {
           setDictLoadingError("Retry failed.");
       }
@@ -99,7 +104,7 @@ const Converter: React.FC = () => {
     <main className="max-w-5xl mx-auto px-4 pb-12 pt-6 w-full overflow-visible">
       
       {/* Dictionary Status */}
-      {!isDictReady && !dictLoadingError && (
+      {!areResourcesReady && !dictLoadingError && (
         <div className="mb-6 p-3 bg-md-secondaryContainer text-md-onSecondaryContainer rounded-xl flex items-center justify-center gap-3 text-sm font-medium animate-pulse border border-md-secondaryContainer">
             <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
             {t('resourcesLoading')}
@@ -153,10 +158,10 @@ const Converter: React.FC = () => {
         <div className="flex-1 flex flex-col bg-md-surface2 relative z-10 rounded-b-[28px] md:rounded-bl-none md:rounded-r-[28px] border-x border-b border-md-outlineVariant md:border-t md:border-l-0">
             {/* Output Toolbar (Mode Selector) */}
            <div className="px-4 sm:px-6 py-3 border-b border-md-outlineVariant/30 flex flex-wrap gap-y-2 justify-between items-center bg-md-surface2 md:rounded-tr-[28px]">
-              <div className="flex gap-1 bg-md-outlineVariant/10 p-1 rounded-xl border border-md-outlineVariant/20">
+              <div className="flex gap-1 bg-md-outlineVariant/10 p-1 rounded-xl border border-md-outlineVariant/20 overflow-x-auto max-w-full">
                   <button 
                     onClick={() => { setMode('HYBRID'); setIsRealTime(false); }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 whitespace-nowrap ${
                         mode === 'HYBRID' 
                         ? 'bg-white text-md-primary shadow-sm ring-1 ring-black/5' 
                         : 'text-md-outline hover:text-md-onSurfaceVariant hover:bg-white/50'
@@ -166,7 +171,7 @@ const Converter: React.FC = () => {
                   </button>
                   <button 
                     onClick={() => setMode('PURE')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 whitespace-nowrap ${
                         mode === 'PURE' 
                         ? 'bg-white text-md-primary shadow-sm ring-1 ring-black/5' 
                         : 'text-md-outline hover:text-md-onSurfaceVariant hover:bg-white/50'
@@ -174,11 +179,21 @@ const Converter: React.FC = () => {
                   >
                     {t('modePure')}
                   </button>
+                  <button 
+                    onClick={() => setMode('TEXT')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 whitespace-nowrap ${
+                        mode === 'TEXT' 
+                        ? 'bg-white text-md-primary shadow-sm ring-1 ring-black/5' 
+                        : 'text-md-outline hover:text-md-onSurfaceVariant hover:bg-white/50'
+                    }`}
+                  >
+                    {t('modeText')}
+                  </button>
               </div>
               
               {/* Actions */}
               <div className="flex items-center gap-2 ml-auto">
-                 {mode === 'PURE' && (
+                 {mode !== 'HYBRID' && (
                      <label className="flex items-center gap-2 cursor-pointer p-1.5 hover:bg-black/5 rounded-lg transition-colors group select-none">
                         <span className="text-xs font-bold text-md-outline group-hover:text-md-onSurface transition-colors">{t('instant')}</span>
                         {/* Custom Switch */}
@@ -212,26 +227,42 @@ const Converter: React.FC = () => {
                         </p>
                       </div>
                       
-                      {/* Secondary Info */}
-                      <div className="mt-auto pt-6 border-t border-md-outlineVariant/20">
-                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
-                            <div>
-                                <p className="text-sm font-mono text-md-secondary mb-1 tracking-tight">{result.jyutping}</p>
-                                <p className="text-[10px] sm:text-xs text-md-outline/60 uppercase tracking-wide">
-                                    {mode === 'HYBRID' ? 'Nambu Standard v5.1 (AI)' : 'Transliteration Mode'}
-                                </p>
+                      {/* Secondary Info - Hide in Text Mode if Jyutping is empty */}
+                      {mode !== 'TEXT' && (
+                          <div className="mt-auto pt-6 border-t border-md-outlineVariant/20">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+                                <div>
+                                    <p className="text-sm font-mono text-md-secondary mb-1 tracking-tight">{result.jyutping}</p>
+                                    <p className="text-[10px] sm:text-xs text-md-outline/60 uppercase tracking-wide">
+                                        {mode === 'HYBRID' ? 'Nambu Standard v5.1 (AI)' : 'Transliteration Mode'}
+                                    </p>
+                                </div>
+                                <button 
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(result.zhengyu);
+                                    }}
+                                    className="self-end sm:self-auto flex items-center gap-2 px-4 py-2 text-sm font-bold text-md-primary bg-md-primary/5 hover:bg-md-primary/10 border border-md-primary/10 rounded-full transition-colors group"
+                                >
+                                    <span>{t('copy')}</span>
+                                    <svg className="group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                                </button>
                             </div>
-                            <button 
-                                onClick={() => {
-                                    navigator.clipboard.writeText(result.zhengyu);
-                                }}
-                                className="self-end sm:self-auto flex items-center gap-2 px-4 py-2 text-sm font-bold text-md-primary bg-md-primary/5 hover:bg-md-primary/10 border border-md-primary/10 rounded-full transition-colors group"
-                            >
-                                <span>{t('copy')}</span>
-                                <svg className="group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                            </button>
-                        </div>
-                      </div>
+                          </div>
+                      )}
+                      
+                      {mode === 'TEXT' && (
+                          <div className="mt-auto pt-6 border-t border-md-outlineVariant/20 flex justify-end">
+                                <button 
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(result.zhengyu);
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-md-primary bg-md-primary/5 hover:bg-md-primary/10 border border-md-primary/10 rounded-full transition-colors group"
+                                >
+                                    <span>{t('copy')}</span>
+                                    <svg className="group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                                </button>
+                          </div>
+                      )}
                   </div>
               ) : (
                   <div className="flex-1 flex items-center justify-center text-md-outline/30 select-none">
@@ -254,7 +285,7 @@ const Converter: React.FC = () => {
             <div className="absolute inset-1 bg-white rounded-full"></div>
             <button 
                 onClick={() => onManualConvert()}
-                disabled={status === ConversionStatus.LOADING || !input.trim() || !isDictReady}
+                disabled={status === ConversionStatus.LOADING || !input.trim() || !areResourcesReady}
                 className={`
                     relative group h-16 w-16 rounded-full flex items-center justify-center transition-all duration-300 isolate
                     ${status === ConversionStatus.LOADING || !input.trim()
@@ -289,7 +320,7 @@ const Converter: React.FC = () => {
             <div className="absolute w-14 h-14 bg-white rounded-full"></div>
             <button 
                 onClick={() => onManualConvert()}
-                disabled={status === ConversionStatus.LOADING || !input.trim() || !isDictReady}
+                disabled={status === ConversionStatus.LOADING || !input.trim() || !areResourcesReady}
                 className={`
                     relative h-14 w-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg ring-4 ring-white
                     ${status === ConversionStatus.LOADING || !input.trim()
@@ -302,20 +333,73 @@ const Converter: React.FC = () => {
           </div>
       )}
 
+      {/* Process Details - Expander (Only for Hybrid Mode when result exists) */}
+      {mode === 'HYBRID' && result && result.processLog && (
+        <div className="mt-8">
+            <button 
+                onClick={() => setShowDetails(!showDetails)}
+                className="flex items-center gap-2 text-xs font-bold text-md-primary uppercase tracking-wider hover:opacity-70 transition-opacity mb-4"
+            >
+                {showDetails ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                )}
+                {t('processDetails')}
+            </button>
+            
+            {showDetails && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white border border-md-outlineVariant rounded-xl p-4 shadow-sm animate-fade-in-up">
+                    <div className="p-3 bg-md-surface2 rounded-lg border border-md-outlineVariant/10">
+                        <div className="text-[10px] font-bold text-md-outline uppercase mb-2">{t('step1')}</div>
+                        <div className="text-sm font-jp break-words whitespace-pre-wrap text-md-onSurface">{result.processLog.step1_normalization}</div>
+                    </div>
+                    <div className="p-3 bg-md-surface2 rounded-lg border border-md-outlineVariant/10">
+                        <div className="text-[10px] font-bold text-md-outline uppercase mb-2">{t('step2')}</div>
+                        <div className="text-sm font-mono break-words whitespace-pre-wrap text-md-secondary">{result.processLog.step2_ai_tagging}</div>
+                    </div>
+                    <div className="p-3 bg-md-surface2 rounded-lg border border-md-outlineVariant/10">
+                        <div className="text-[10px] font-bold text-md-outline uppercase mb-2">{t('step3')}</div>
+                        <div className="text-sm font-jp break-words whitespace-pre-wrap text-md-primary font-medium">{result.processLog.step3_phonetic}</div>
+                    </div>
+                </div>
+            )}
+        </div>
+      )}
+
       {/* Informational Footer */}
       <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-md-outline/80">
-         <div className="p-5 rounded-2xl bg-white border border-md-outlineVariant shadow-none">
-            <h4 className="font-bold mb-2 text-md-primary">{t('nounAnchorTitle')}</h4>
-            <p className="text-xs leading-relaxed">{t('nounAnchorDesc')}</p>
-         </div>
-         <div className="p-5 rounded-2xl bg-white border border-md-outlineVariant shadow-none">
-            <h4 className="font-bold mb-2 text-md-primary">{t('phoneticKanaTitle')}</h4>
-            <p className="text-xs leading-relaxed">{t('phoneticKanaDesc')}</p>
-         </div>
-         <div className="p-5 rounded-2xl bg-white border border-md-outlineVariant shadow-none">
-            <h4 className="font-bold mb-2 text-md-primary">{t('transliterationTitle')}</h4>
-            <p className="text-xs leading-relaxed">{t('transliterationDesc')}</p>
-         </div>
+         {/* Show different cards based on mode or general info */}
+         {mode === 'TEXT' ? (
+             <div className="md:col-span-3 p-5 rounded-2xl bg-white border border-md-outlineVariant shadow-none flex flex-col md:flex-row gap-6">
+                 <div className="flex-1">
+                    <h4 className="font-bold mb-2 text-md-primary">{t('textConversionTitle')}</h4>
+                    <p className="text-xs leading-relaxed">{t('textConversionDesc')}</p>
+                 </div>
+                 <div className="flex-1 border-t md:border-t-0 md:border-l border-md-outlineVariant/20 pt-4 md:pt-0 md:pl-6">
+                     <p className="text-xs leading-relaxed opacity-70">
+                         {t('inputLabel')}: 简体/繁体中文<br/>
+                         {t('resultLabel')}: 日本新字体 (Shinjitai)<br/>
+                         Punctuation: ，→ 、
+                     </p>
+                 </div>
+             </div>
+         ) : (
+            <>
+                <div className="p-5 rounded-2xl bg-white border border-md-outlineVariant shadow-none">
+                    <h4 className="font-bold mb-2 text-md-primary">{t('nounAnchorTitle')}</h4>
+                    <p className="text-xs leading-relaxed">{t('nounAnchorDesc')}</p>
+                </div>
+                <div className="p-5 rounded-2xl bg-white border border-md-outlineVariant shadow-none">
+                    <h4 className="font-bold mb-2 text-md-primary">{t('phoneticKanaTitle')}</h4>
+                    <p className="text-xs leading-relaxed">{t('phoneticKanaDesc')}</p>
+                </div>
+                <div className="p-5 rounded-2xl bg-white border border-md-outlineVariant shadow-none">
+                    <h4 className="font-bold mb-2 text-md-primary">{t('transliterationTitle')}</h4>
+                    <p className="text-xs leading-relaxed">{t('transliterationDesc')}</p>
+                </div>
+            </>
+         )}
       </div>
 
     </main>
