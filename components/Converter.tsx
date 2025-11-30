@@ -1,5 +1,3 @@
-
-
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { convertHybrid } from '../services/hybridService';
 import { convertRuleBased } from '../services/ruleService';
@@ -233,39 +231,34 @@ const Converter: React.FC = () => {
                 />
            </div>
            
-           {/* Left Footer (Char count) */}
-           <div className="h-12 border-t border-dl-border/50 flex items-center justify-between px-4 text-xs text-gray-400">
-               <div></div> {/* Spacer */}
-               <div className="flex items-center">
+           {/* Left Footer (Char count & Desktop Button) */}
+           <div className="h-14 border-t border-dl-border flex items-center justify-between px-4 bg-gray-50/30">
+               <div className="text-xs text-gray-400 font-medium">
                    {input.length} {t('chars')}
                </div>
-           </div>
-        </div>
 
-        {/* Divider & Convert Button */}
-        <div className="w-[1px] h-auto bg-dl-border hidden md:block relative z-10">
-             {(!isRealTime || mode === 'HYBRID') && (
-                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+               {/* Desktop Convert Button placed in footer */}
+               <div className="hidden md:block">
+                  {(!isRealTime || mode === 'HYBRID') && (
                      <button
                         onClick={onManualConvert}
                         disabled={status === ConversionStatus.LOADING || !input.trim() || !areResourcesReady}
                         className={`
-                            flex items-center gap-2 px-4 py-2 rounded-lg font-bold shadow-lg transition-all transform hover:scale-105 active:scale-95 whitespace-nowrap
+                            px-6 py-1.5 rounded-lg font-bold text-sm shadow-sm transition-all active:scale-95
                             ${status === ConversionStatus.LOADING || !input.trim() 
                                 ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed' 
                                 : 'bg-dl-accent text-white hover:bg-teal-800'}
                         `}
                      >
-                        {status === ConversionStatus.LOADING ? (
-                            <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin"></div>
-                        ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
-                        )}
-                        <span>{t('convert')}</span>
+                        {status === ConversionStatus.LOADING ? t('loading') : t('convert')}
                      </button>
-                 </div>
-             )}
+                  )}
+               </div>
+           </div>
         </div>
+
+        {/* Divider */}
+        <div className="w-[1px] h-auto bg-dl-border hidden md:block relative z-10"></div>
         
         {/* Mobile Convert Button */}
         {(!isRealTime || mode === 'HYBRID') && (
