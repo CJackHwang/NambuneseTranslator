@@ -1,5 +1,4 @@
-
-import { convertHybridTagging } from './geminiService';
+import { extractPreservedTerms } from './geminiService';
 import { toShinjitai, initShinjitai } from './shinjitaiService';
 import { getJyutping, initDictionary } from './jyutpingService';
 import { convertToKana } from './kanaConverter';
@@ -10,84 +9,115 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
   await Promise.all([initDictionary(), initShinjitai()]);
 
   // === STEP 1: Pre-processing (Normalization) ===
-  // Convert Hanzi -> Shinjitai locally
+  // Convert Hanzi -> Shinjitai locally FIRST.
   let preProcessed = toShinjitai(inputText);
   // Map Punctuation: ， -> 、
   preProcessed = preProcessed.replace(/，/g, '、');
 
-  // === STEP 2: AI Tagging ===
-  // Send the normalized text to AI for strictly structural tagging
-  let taggedText = await convertHybridTagging(preProcessed);
+  // === STEP 2: AI Keyword Extraction ===
+  // Get a list of words to KEEP as Kanji (Nouns, Pronouns, etc.)
+  let preservedKeywords: string[] = [];
+  try {
+    preservedKeywords = await extractPreservedTerms(preProcessed);
+  } catch (error) {
+    console.error("AI Extraction failed, falling back to full phonetization", error);
+    preservedKeywords = [];
+  }
 
-  // === STEP 3: Phonetic Conversion ===
-  // Parse tags and convert raw segments to Kana
+  // Sort keywords by length (descending) to ensure greedy matching
+  // This prevents short words from matching inside longer preserved terms.
+  preservedKeywords.sort((a, b) => b.length - a.length);
+
+  // === STEP 3: Segmentation & Phonetic Conversion ===
+  // Scan the text. Prioritize: 
+  // 1. AI Preserved Keywords
+  // 2. English/Latin/Numbers (Force Preserve)
+  // 3. Punctuation (Keep)
+  // 4. Everything else -> Kana
   
-  const regex = /\{([^}]+)\}|\[([^\]]+)\]|([^{}[\]]+)/g;
-  let match;
   const segments: { text: string, type: 'KANJI' | 'KANA', source?: string }[] = [];
-  
   let fullJyutping = "";
   let fullZhengyu = "";
 
-  while ((match = regex.exec(taggedText)) !== null) {
-    if (match[1]) {
-      // === KANJI SEGMENT (Inside {}) ===
-      // AI marked this as Noun/Anchor. Keep as is.
-      const content = match[1];
-      
-      segments.push({ text: content, type: 'KANJI' });
-      fullZhengyu += content;
-      
-      // Get Jyutping for Kanji parts (for display/reference)
-      const jpArray = await getJyutping(content);
-      const jp = jpArray.join(' ');
-      fullJyutping += jp + " ";
+  let i = 0;
+  const len = preProcessed.length;
 
-    } else if (match[2]) {
-      // === FOREIGN SEGMENT (Inside []) ===
-      // AI marked this as Foreign/Katakana. Keep as is.
-      const content = match[2];
-      
-      segments.push({ text: content, type: 'KANA', source: 'Foreign' });
-      fullZhengyu += content;
-      fullJyutping += content + " ";
+  while (i < len) {
+    let match: string | null = null;
 
-    } else if (match[3]) {
-      // === RAW SEGMENT (Outside tags) ===
-      // AI marked this as Verb/Adj/Function Word. Convert to Kana.
-      const content = match[3];
-      
-      // 1. Convert to Jyutping
-      const jpArray = await getJyutping(content);
-      
-      // 2. Convert to Kana
-      let kanaSegment = "";
-      let jpSegment = "";
-      
-      for (let i = 0; i < jpArray.length; i++) {
-        const jp = jpArray[i];
-        const kana = convertToKana(jp);
-        kanaSegment += kana;
-        jpSegment += jp + " ";
+    // A. Check for AI Preserved Keyword Match
+    for (const keyword of preservedKeywords) {
+      if (preProcessed.startsWith(keyword, i)) {
+        match = keyword;
+        break; // Found longest match due to sort
       }
+    }
+
+    if (match) {
+      // === KANJI SEGMENT (Matched Keyword) ===
+      segments.push({ text: match, type: 'KANJI' });
+      fullZhengyu += match;
+
+      // Get Jyutping for reference (even if kept as Kanji)
+      // Note: If the match is English, getJyutping usually returns it as-is
+      const jpArray = await getJyutping(match);
+      fullJyutping += jpArray.join(' ') + " ";
+
+      // Advance index by length of match
+      i += match.length;
+    } else {
+      // No keyword match found. Check individual character.
+      const char = preProcessed[i];
       
-      segments.push({ text: kanaSegment, type: 'KANA', source: jpSegment.trim() });
-      fullZhengyu += kanaSegment;
-      fullJyutping += jpSegment;
+      // B. Check for Latin/ASCII/Numbers (English Protection)
+      // If valid ASCII (letters, numbers), preserve it. 
+      // Do NOT send 'a' to kana converter, or it becomes 'あ'.
+      // Range: 0-9, A-Z, a-z. 
+      // Note: Punctuation is handled in the next block usually, but ASCII punctuation is safe here too.
+      if (/[a-zA-Z0-9]/.test(char)) {
+         segments.push({ text: char, type: 'KANJI' }); // Treat as 'KANJI' layer (preserved)
+         fullZhengyu += char;
+         fullJyutping += char; // No space for English usually, or add if needed
+         i++;
+         continue;
+      }
+
+      // C. Punctuation/Space
+      if (/[\s\p{P}]/u.test(char)) {
+        segments.push({ text: char, type: 'KANA' });
+        fullZhengyu += char;
+        fullJyutping += char + " ";
+        i++;
+        continue;
+      }
+
+      // D. Fallback: Convert to Kana (Verbs, Adjectives, Particles, unmatched terms)
+      // Convert single char to Jyutping
+      const jpArray = await getJyutping(char);
+      const jp = jpArray[0]; // Single char input
+      
+      // Convert to Kana
+      const kana = convertToKana(jp);
+      
+      segments.push({ text: kana, type: 'KANA', source: jp });
+      fullZhengyu += kana;
+      fullJyutping += jp + " ";
+      
+      i++;
     }
   }
 
   return {
     original: inputText,
-    cantonese: taggedText, // Using this field to store the tagged version
+    cantonese: JSON.stringify(preservedKeywords), // Log the keywords found
     jyutping: fullJyutping.trim(),
     zhengyu: fullZhengyu,
-    explanation: "Hybrid Pipeline v5.1",
+    explanation: "Hybrid Pipeline v5.1 (Keyword List + English Protection)",
     engine: 'HYBRID',
     segments: segments,
     processLog: {
       step1_normalization: preProcessed,
-      step2_ai_tagging: taggedText,
+      step2_ai_tagging: JSON.stringify(preservedKeywords, null, 2),
       step3_phonetic: fullZhengyu
     }
   };

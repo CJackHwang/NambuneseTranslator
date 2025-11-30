@@ -13,7 +13,7 @@ export interface TranslationResult {
   }[];
   processLog?: {
     step1_normalization: string;
-    step2_ai_tagging: string;
+    step2_ai_tagging: string; // Shows the JSON list of keywords extracted
     step3_phonetic: string;
   };
 }
