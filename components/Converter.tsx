@@ -19,9 +19,10 @@ const Converter: React.FC = () => {
   const [areResourcesReady, setAreResourcesReady] = useState(false);
   const [dictLoadingError, setDictLoadingError] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
-  const [showCopyFeedback, setShowCopyFeedback] = useState<string | null>(null); // 'MAIN' | 'KANA'
+  const [showCopyFeedback, setShowCopyFeedback] = useState<string | null>(null); 
 
   const debounceTimeoutRef = useRef<number | null>(null);
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
   // Initialize Dictionaries on Mount
   useEffect(() => {
@@ -108,136 +109,163 @@ const Converter: React.FC = () => {
   };
 
   return (
-    <main className="max-w-5xl mx-auto px-4 pb-12 pt-6 w-full overflow-visible">
+    <main className="w-full max-w-7xl mx-auto px-4 py-8">
       
-      {/* Dictionary Status */}
-      {!areResourcesReady && !dictLoadingError && (
-        <div className="mb-6 p-3 bg-md-secondaryContainer text-md-onSecondaryContainer rounded-xl flex items-center justify-center gap-3 text-sm font-medium animate-pulse border border-md-secondaryContainer">
-            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-            {t('resourcesLoading')}
-        </div>
-      )}
-
+      {/* Resource Loading Errors */}
       {dictLoadingError && (
-        <div className="mb-6 p-4 bg-md-error/10 text-md-error rounded-xl flex items-center justify-between border border-md-error/20">
+        <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg flex items-center justify-between border border-red-200">
             <span className="text-sm font-medium">{dictLoadingError}</span>
-            <button onClick={retryDictLoad} className="px-4 py-1 bg-white rounded-full text-xs font-bold uppercase tracking-wider border border-md-error/20 hover:bg-md-error/5 transition-colors">{t('retry')}</button>
+            <button onClick={retryDictLoad} className="px-4 py-1 bg-white rounded shadow-sm text-xs font-bold uppercase hover:bg-red-50">{t('retry')}</button>
         </div>
       )}
 
-      {/* Main Translation Card - FLAT STYLE */}
-      <div className="bg-transparent overflow-visible flex flex-col md:flex-row min-h-[480px] relative z-0">
+      {/* MAIN TRANSLATOR INTERFACE */}
+      <div className="bg-white rounded-xl shadow-card border border-dl-border flex flex-col md:flex-row min-h-[500px] overflow-hidden relative">
         
-        {/* Left Side: Input */}
-        <div className="flex-1 flex flex-col border border-md-outlineVariant relative z-10 bg-white rounded-t-[28px] md:rounded-tr-none md:rounded-l-[28px]">
-           {/* Input Toolbar */}
-           <div className="px-6 py-4 border-b border-md-outlineVariant/30 flex justify-between items-center bg-white rounded-t-[28px] md:rounded-tr-none">
-              <span className="text-xs font-bold text-md-primary tracking-wider uppercase">{t('inputLabel')}</span>
-              {input && (
-                  <button 
-                    onClick={() => { setInput(''); setResult(null); }}
-                    className="text-md-outline hover:text-md-error transition-colors p-1 rounded-full hover:bg-md-surface2"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                  </button>
-              )}
-           </div>
-
-           <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                    onManualConvert();
-                }
-            }}
-            placeholder={t('inputPlaceholder')}
-            className="flex-1 w-full p-6 text-2xl sm:text-3xl bg-transparent border-none outline-none resize-none font-sans placeholder:text-md-outline/30 leading-normal rounded-bl-[28px] md:rounded-bl-none"
-            spellCheck="false"
-           />
-           
-           <div className="px-6 py-4 flex justify-between items-center text-xs text-md-outline/60 border-t border-transparent">
-              <span>{input.length} {t('chars')}</span>
-           </div>
-        </div>
-
-        {/* Right Side: Output */}
-        <div className="flex-1 flex flex-col bg-md-surface2 relative z-10 rounded-b-[28px] md:rounded-bl-none md:rounded-r-[28px] border-x border-b border-md-outlineVariant md:border-t md:border-l-0">
-            {/* Output Toolbar (Mode Selector) */}
-           <div className="px-4 sm:px-6 py-3 border-b border-md-outlineVariant/30 flex flex-wrap gap-y-2 justify-between items-center bg-md-surface2 md:rounded-tr-[28px]">
-              <div className="flex gap-1 bg-md-outlineVariant/10 p-1 rounded-xl border border-md-outlineVariant/20 overflow-x-auto max-w-full">
-                  <button 
-                    onClick={() => { setMode('HYBRID'); setIsRealTime(false); }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 whitespace-nowrap ${
-                        mode === 'HYBRID' 
-                        ? 'bg-white text-md-primary shadow-sm ring-1 ring-black/5' 
-                        : 'text-md-outline hover:text-md-onSurfaceVariant hover:bg-white/50'
-                    }`}
-                  >
-                    {t('modeHybrid')}
-                  </button>
-                  <button 
-                    onClick={() => setMode('PURE')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 whitespace-nowrap ${
-                        mode === 'PURE' 
-                        ? 'bg-white text-md-primary shadow-sm ring-1 ring-black/5' 
-                        : 'text-md-outline hover:text-md-onSurfaceVariant hover:bg-white/50'
-                    }`}
-                  >
-                    {t('modePure')}
-                  </button>
-                  <button 
-                    onClick={() => setMode('TEXT')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 whitespace-nowrap ${
-                        mode === 'TEXT' 
-                        ? 'bg-white text-md-primary shadow-sm ring-1 ring-black/5' 
-                        : 'text-md-outline hover:text-md-onSurfaceVariant hover:bg-white/50'
-                    }`}
-                  >
-                    {t('modeText')}
-                  </button>
-              </div>
+        {/* === LEFT SIDE: INPUT === */}
+        <div className="flex-1 flex flex-col relative group">
+           {/* Left Toolbar */}
+           <div className="h-12 border-b border-dl-border flex items-center px-4 bg-white">
+              <span className="text-sm font-bold text-dl-accent uppercase tracking-wide">{t('inputLabel')}</span>
               
-              {/* Actions */}
-              <div className="flex items-center gap-2 ml-auto">
-                 {mode !== 'HYBRID' && (
-                     <label className="flex items-center gap-2 cursor-pointer p-1.5 hover:bg-black/5 rounded-lg transition-colors group select-none">
-                        <span className="text-xs font-bold text-md-outline group-hover:text-md-onSurface transition-colors">{t('instant')}</span>
-                        {/* Custom Switch */}
-                        <div className={`w-10 h-6 rounded-full relative transition-colors duration-300 ease-out border ${isRealTime ? 'bg-md-primary border-md-primary' : 'bg-md-outlineVariant/40 border-transparent'}`}>
-                            <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-300 cubic-bezier(0.4, 0.0, 0.2, 1) ${isRealTime ? 'translate-x-4' : 'translate-x-0'}`}></div>
-                        </div>
-                        <input type="checkbox" checked={isRealTime} onChange={(e) => setIsRealTime(e.target.checked)} className="hidden" />
-                     </label>
+              <div className="ml-auto flex items-center gap-2">
+                 {!areResourcesReady && !dictLoadingError && (
+                    <div className="flex items-center gap-2 text-xs text-dl-textSec">
+                        <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                        <span>Loading...</span>
+                    </div>
+                 )}
+                 {input && (
+                    <button 
+                        onClick={() => { setInput(''); setResult(null); textAreaRef.current?.focus(); }}
+                        className="p-1.5 text-dl-textSec hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                        title="Clear"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
                  )}
               </div>
            </div>
 
-           {/* Result Display */}
-           <div className="flex-1 p-6 sm:p-8 flex flex-col relative min-h-[300px]">
-              <div className="flex items-center justify-between mb-4">
-                 <h3 className="text-xs font-bold text-md-primary tracking-wider uppercase">{t('resultLabel')}</h3>
-              </div>
+           {/* Input Text Area */}
+           <div className="flex-1 relative">
+                <textarea
+                    ref={textAreaRef}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                            onManualConvert();
+                        }
+                    }}
+                    placeholder={t('inputPlaceholder')}
+                    className="w-full h-full p-6 text-xl sm:text-2xl bg-transparent border-none outline-none resize-none font-sans text-dl-text placeholder:text-gray-300 leading-relaxed"
+                    spellCheck="false"
+                />
+           </div>
+           
+           {/* Left Footer (Char count) */}
+           <div className="h-12 border-t border-dl-border/50 flex items-center justify-end px-4 text-xs text-gray-400">
+               {input.length} {t('chars')}
+           </div>
+        </div>
 
-              {status === ConversionStatus.LOADING ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-md-surface2/50 z-20 backdrop-blur-[2px] rounded-b-[28px] md:rounded-bl-none md:rounded-br-[28px]">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="w-10 h-10 border-4 border-md-primary/20 border-t-md-primary rounded-full animate-spin"></div>
-                        <span className="text-sm font-medium text-md-primary animate-pulse">{t('loading')}</span>
-                      </div>
-                  </div>
-              ) : result ? (
-                  <div className="flex-1 flex flex-col gap-6 animate-fade-in-up">
-                      {/* Reduced font size to text-xl/2xl and increased leading for Ruby legibility */}
-                      <div className="text-xl sm:text-2xl leading-loose font-jp font-medium text-md-onSurface break-words">
+        {/* Divider & Convert Button */}
+        <div className="w-[1px] h-auto bg-dl-border hidden md:block relative z-10">
+             {(!isRealTime || mode === 'HYBRID') && (
+                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+                     <button
+                        onClick={onManualConvert}
+                        disabled={status === ConversionStatus.LOADING || !input.trim() || !areResourcesReady}
+                        className={`
+                            flex items-center gap-2 px-4 py-2 rounded-lg font-bold shadow-lg transition-all transform hover:scale-105 active:scale-95 whitespace-nowrap
+                            ${status === ConversionStatus.LOADING || !input.trim() 
+                                ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed' 
+                                : 'bg-dl-accent text-white hover:bg-teal-800'}
+                        `}
+                     >
+                        {status === ConversionStatus.LOADING ? (
+                            <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin"></div>
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+                        )}
+                        <span>{t('convert')}</span>
+                     </button>
+                 </div>
+             )}
+        </div>
+        
+        {/* Mobile Convert Button */}
+        {(!isRealTime || mode === 'HYBRID') && (
+            <div className="md:hidden p-4 bg-white border-y border-dl-border flex justify-center">
+                 <button
+                    onClick={onManualConvert}
+                    disabled={status === ConversionStatus.LOADING || !input.trim() || !areResourcesReady}
+                    className={`
+                        w-full py-3 rounded-lg font-bold shadow-sm transition-all flex items-center justify-center gap-2
+                        ${status === ConversionStatus.LOADING || !input.trim() 
+                            ? 'bg-gray-100 text-gray-400' 
+                            : 'bg-dl-accent text-white'}
+                    `}
+                 >
+                     {status === ConversionStatus.LOADING ? t('loading') : t('convert')}
+                 </button>
+            </div>
+        )}
+
+        {/* === RIGHT SIDE: OUTPUT === */}
+        <div className="flex-1 flex flex-col bg-dl-output relative">
+           
+           {/* Right Toolbar */}
+           <div className="h-12 border-b border-dl-border flex items-center justify-between px-2 bg-dl-output md:bg-dl-output/50">
+               <div className="flex items-center gap-1">
+                  {(['HYBRID', 'PURE', 'TEXT'] as const).map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => { setMode(m); setIsRealTime(false); }}
+                        className={`
+                            px-3 py-1.5 text-xs font-bold rounded-md transition-all
+                            ${mode === m 
+                                ? 'text-dl-accent bg-white shadow-sm ring-1 ring-black/5' 
+                                : 'text-dl-textSec hover:bg-gray-200/50 hover:text-dl-text'}
+                        `}
+                      >
+                          {m === 'HYBRID' && t('modeHybrid')}
+                          {m === 'PURE' && t('modePure')}
+                          {m === 'TEXT' && t('modeText')}
+                      </button>
+                  ))}
+               </div>
+               
+               {/* Instant Toggle */}
+               {mode !== 'HYBRID' && (
+                 <label className="flex items-center gap-2 cursor-pointer select-none px-2">
+                    <span className="text-xs font-medium text-dl-textSec">{t('instant')}</span>
+                    <div className={`w-8 h-4 rounded-full relative transition-colors ${isRealTime ? 'bg-dl-accent' : 'bg-gray-300'}`}>
+                        <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform ${isRealTime ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                    </div>
+                    <input type="checkbox" checked={isRealTime} onChange={(e) => setIsRealTime(e.target.checked)} className="hidden" />
+                 </label>
+               )}
+           </div>
+
+           {/* Output Content */}
+           <div className="flex-1 p-6 relative overflow-y-auto">
+               {status === ConversionStatus.LOADING && mode === 'HYBRID' ? (
+                   <div className="flex flex-col items-center justify-center h-full text-dl-accent opacity-50 gap-3">
+                       <div className="w-8 h-8 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                       <span className="text-sm font-medium">{t('loading')}</span>
+                   </div>
+               ) : result ? (
+                   <div className="text-xl sm:text-2xl leading-loose font-jp text-dl-text break-words animate-fade-in">
                         {mode === 'HYBRID' && result.segments ? (
                             <div className="flex flex-wrap items-baseline gap-y-2">
                                 {result.segments.map((seg, idx) => {
                                     if (seg.type === 'KANJI' && seg.reading) {
                                         return (
-                                            <ruby key={idx} className="mr-0.5 group cursor-help">
+                                            <ruby key={idx} className="mr-0.5 group cursor-help select-all">
                                                 {seg.text}
-                                                <rt className="text-[0.55em] text-md-secondary font-normal select-none group-hover:text-md-primary transition-colors">{seg.reading}</rt>
+                                                <rt className="text-[0.6em] text-dl-textSec/80 font-normal select-none group-hover:text-dl-accent transition-colors">{seg.reading}</rt>
                                             </ruby>
                                         );
                                     }
@@ -245,190 +273,114 @@ const Converter: React.FC = () => {
                                 })}
                             </div>
                         ) : (
-                            // Fallback or Pure/Text mode without Ruby segments
-                            result.zhengyu
+                            <span>{result.zhengyu}</span>
                         )}
-                      </div>
-                      
-                      {/* Secondary Info */}
-                      <div className="mt-auto pt-6 border-t border-md-outlineVariant/20">
-                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
-                            <div>
-                                <p className="text-[10px] sm:text-xs text-md-outline/60 uppercase tracking-wide">
-                                    {mode === 'HYBRID' ? 'Nambu Standard v5.1 (Ruby Mode)' : mode === 'PURE' ? 'Transliteration Mode' : 'Text Conversion'}
-                                </p>
-                            </div>
-                            
-                            <div className="self-end sm:self-auto flex items-center gap-2">
-                                {/* Copy Full Kana Button (Visible mainly in Hybrid mode, but available if fullKana exists) */}
-                                {result.fullKana && mode === 'HYBRID' && (
-                                    <button 
-                                        onClick={() => handleCopy(result.fullKana || '', 'KANA')}
-                                        className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-md-secondary bg-white hover:bg-md-secondaryContainer border border-md-outlineVariant/50 rounded-lg transition-colors group"
-                                        title={t('copyKana')}
-                                    >
-                                        <span>{showCopyFeedback === 'KANA' ? t('copied') : t('copyKana')}</span>
-                                        {showCopyFeedback === 'KANA' ? (
-                                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                        ) : (
-                                            <span className="text-[10px] px-1 border border-current rounded opacity-50">あ</span>
-                                        )}
-                                    </button>
-                                )}
+                   </div>
+               ) : (
+                   <div className="h-full flex items-center justify-center text-gray-300">
+                       <span className="text-sm">{t('waiting')}</span>
+                   </div>
+               )}
+           </div>
 
-                                {/* Main Copy Button */}
-                                <button 
-                                    onClick={() => handleCopy(result.zhengyu, 'MAIN')}
-                                    className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-md-primary bg-md-primary/5 hover:bg-md-primary/10 border border-md-primary/10 rounded-full transition-colors group"
-                                >
-                                    <span>{showCopyFeedback === 'MAIN' ? t('copied') : t('copy')}</span>
-                                    {showCopyFeedback === 'MAIN' ? (
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                    ) : (
-                                        <svg className="group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-                      </div>
-                  </div>
-              ) : (
-                  <div className="flex-1 flex items-center justify-center text-md-outline/30 select-none">
-                      <span className="text-lg font-medium">{t('waiting')}</span>
-                  </div>
-              )}
-              
-              {error && (
-                <div className="absolute bottom-4 left-4 right-4 p-4 bg-md-error/10 text-md-error text-sm rounded-xl border border-md-error/20 shadow-sm">
-                    <span className="font-bold">Error:</span> {error}
+           {/* Right Footer */}
+           <div className="h-14 border-t border-dl-border flex items-center justify-between px-4 bg-dl-output">
+                <div className="flex items-center gap-2">
+                     {mode === 'HYBRID' && result && (
+                         <button 
+                            onClick={() => setShowDetails(!showDetails)}
+                            className={`p-2 rounded-md transition-colors ${showDetails ? 'bg-gray-200 text-dl-text' : 'text-dl-textSec hover:bg-gray-200'}`}
+                            title={t('processDetails')}
+                         >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h5"/><path d="M22 12h-5"/><path d="M7 12l2-6h6l2 6"/><path d="M7 12l-2 6h14l-2-6"/></svg>
+                         </button>
+                     )}
                 </div>
-              )}
+
+                <div className="flex items-center gap-2">
+                    {result?.fullKana && mode === 'HYBRID' && (
+                        <button 
+                            onClick={() => handleCopy(result.fullKana || '', 'KANA')}
+                            className="p-2 text-dl-textSec hover:text-dl-primary hover:bg-white rounded-md transition-all flex items-center gap-1.5"
+                            title={t('copyKana')}
+                        >
+                             {showCopyFeedback === 'KANA' ? (
+                                <svg className="text-green-600" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                             ) : (
+                                <span className="text-xs font-bold border border-current rounded px-1 opacity-70">あ</span>
+                             )}
+                        </button>
+                    )}
+
+                    <button 
+                        onClick={() => result && handleCopy(result.zhengyu, 'MAIN')}
+                        disabled={!result}
+                        className={`p-2 rounded-md transition-all flex items-center gap-1.5 ${!result ? 'text-gray-300' : 'text-dl-textSec hover:text-dl-primary hover:bg-white'}`}
+                        title={t('copy')}
+                    >
+                        {showCopyFeedback === 'MAIN' ? (
+                            <svg className="text-green-600" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                        )}
+                    </button>
+                </div>
            </div>
         </div>
-        
-        {/* Floating Action Button */}
-        {(!isRealTime || mode === 'HYBRID') && (
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30 md:block hidden">
-            {/* Matte background to prevent transparency line bleed */}
-            <div className="absolute inset-1 bg-white rounded-full"></div>
-            <button 
-                onClick={() => onManualConvert()}
-                disabled={status === ConversionStatus.LOADING || !input.trim() || !areResourcesReady}
-                className={`
-                    relative group h-16 w-16 rounded-full flex items-center justify-center transition-all duration-300 isolate
-                    ${status === ConversionStatus.LOADING || !input.trim()
-                        ? 'bg-md-surfaceVariant border-[6px] border-white shadow-sm cursor-not-allowed' 
-                        : 'bg-md-primary border-[6px] border-white shadow-xl hover:scale-110 hover:bg-[#005454] active:scale-95 active:shadow-sm'}
-                `}
-                title={t('convert')}
-            >
-                <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    width="28" 
-                    height="28" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="2.5" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round"
-                    className={`transition-colors ${status === ConversionStatus.LOADING || !input.trim() ? 'text-md-outline' : 'text-white'}`}
-                >
-                    <path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>
-                </svg>
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* Mobile FAB */}
-      {(!isRealTime || mode === 'HYBRID') && (
-          <div className="flex justify-center -mt-7 relative z-30 md:hidden">
-             {/* Matte */}
-            <div className="absolute w-14 h-14 bg-white rounded-full"></div>
-            <button 
-                onClick={() => onManualConvert()}
-                disabled={status === ConversionStatus.LOADING || !input.trim() || !areResourcesReady}
-                className={`
-                    relative h-14 w-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg ring-4 ring-white
-                    ${status === ConversionStatus.LOADING || !input.trim()
-                        ? 'bg-md-surfaceVariant text-md-outline cursor-not-allowed' 
-                        : 'bg-md-primary text-white hover:scale-105 active:scale-95'}
-                `}
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
-            </button>
-          </div>
-      )}
-
-      {/* Process Details - Expander (Only for Hybrid Mode when result exists) */}
-      {mode === 'HYBRID' && result && result.processLog && (
-        <div className="mt-8">
-            <button 
-                onClick={() => setShowDetails(!showDetails)}
-                className="flex items-center gap-2 text-xs font-bold text-md-primary uppercase tracking-wider hover:opacity-70 transition-opacity mb-4"
-            >
-                {showDetails ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-                ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                )}
-                {t('processDetails')}
-            </button>
-            
-            {showDetails && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white border border-md-outlineVariant rounded-xl p-4 shadow-sm animate-fade-in-up">
-                    <div className="p-3 bg-md-surface2 rounded-lg border border-md-outlineVariant/10">
-                        <div className="text-[10px] font-bold text-md-outline uppercase mb-2">{t('step1')}</div>
-                        <div className="text-sm font-jp break-words whitespace-pre-wrap text-md-onSurface">{result.processLog.step1_normalization}</div>
-                    </div>
-                    <div className="p-3 bg-md-surface2 rounded-lg border border-md-outlineVariant/10">
-                        <div className="text-[10px] font-bold text-md-outline uppercase mb-2">{t('step2')}</div>
-                        <div className="text-sm font-mono break-words whitespace-pre-wrap text-md-secondary">{result.processLog.step2_ai_tagging}</div>
-                    </div>
-                    {/* Replaced Step 3 text log with the intermediate Jyutping log as requested by user to hide it from main view */}
-                    <div className="p-3 bg-md-surface2 rounded-lg border border-md-outlineVariant/10">
-                        <div className="text-[10px] font-bold text-md-outline uppercase mb-2">Raw Jyutping (Ref)</div>
-                        <div className="text-sm font-mono break-words whitespace-pre-wrap text-md-primary font-medium">{result.jyutping}</div>
-                    </div>
+      {/* Expanded Details Panel */}
+      {mode === 'HYBRID' && result && showDetails && result.processLog && (
+        <div className="mt-4 bg-white rounded-xl shadow-card border border-dl-border p-6 animate-fade-in-up">
+            <h4 className="text-sm font-bold text-dl-text uppercase mb-4 tracking-wide border-b border-dl-border pb-2">{t('processDetails')}</h4>
+            <div className="space-y-4">
+                
+                {/* Step 1: Raw Input & AI Extraction (Parallel) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <div>
+                       <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Raw Input</div>
+                       <div className="text-sm bg-gray-50 p-2 rounded border border-gray-100 font-sans text-dl-text truncate" title={result.processLog.step1_raw_input}>{result.processLog.step1_raw_input}</div>
+                   </div>
+                   <div>
+                       <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">AI Extracted (Raw Keywords)</div>
+                       <div className="text-sm bg-blue-50 p-2 rounded border border-blue-100 font-mono text-dl-primary text-xs break-all">{result.processLog.step2_ai_extraction}</div>
+                   </div>
                 </div>
-            )}
+
+                {/* Arrow Divider */}
+                <div className="flex justify-center">
+                    <svg className="text-gray-300" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+                </div>
+
+                {/* Step 2: Normalization (Unification) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                       <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Normalized Text (Shinjitai)</div>
+                       <div className="text-sm bg-gray-50 p-2 rounded border border-gray-100 font-jp text-dl-text truncate">{result.processLog.step3_normalization_text}</div>
+                   </div>
+                   <div>
+                       <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Normalized Keywords</div>
+                       <div className="text-sm bg-teal-50 p-2 rounded border border-teal-100 font-mono text-teal-800 text-xs break-all">{result.processLog.step4_normalization_keywords}</div>
+                   </div>
+                </div>
+            </div>
         </div>
       )}
 
-      {/* Informational Footer */}
-      <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-md-outline/80">
-         {/* Show different cards based on mode or general info */}
-         {mode === 'TEXT' ? (
-             <div className="md:col-span-3 p-5 rounded-2xl bg-white border border-md-outlineVariant shadow-none flex flex-col md:flex-row gap-6">
-                 <div className="flex-1">
-                    <h4 className="font-bold mb-2 text-md-primary">{t('textConversionTitle')}</h4>
-                    <p className="text-xs leading-relaxed">{t('textConversionDesc')}</p>
-                 </div>
-                 <div className="flex-1 border-t md:border-t-0 md:border-l border-md-outlineVariant/20 pt-4 md:pt-0 md:pl-6">
-                     <p className="text-xs leading-relaxed opacity-70">
-                         {t('inputLabel')}: 简体/繁体中文<br/>
-                         {t('resultLabel')}: 日本新字体 (Shinjitai)<br/>
-                         Punctuation: ，→ 、
-                     </p>
-                 </div>
-             </div>
-         ) : (
-            <>
-                <div className="p-5 rounded-2xl bg-white border border-md-outlineVariant shadow-none">
-                    <h4 className="font-bold mb-2 text-md-primary">{t('nounAnchorTitle')}</h4>
-                    <p className="text-xs leading-relaxed">{t('nounAnchorDesc')}</p>
-                </div>
-                <div className="p-5 rounded-2xl bg-white border border-md-outlineVariant shadow-none">
-                    <h4 className="font-bold mb-2 text-md-primary">{t('phoneticKanaTitle')}</h4>
-                    <p className="text-xs leading-relaxed">{t('phoneticKanaDesc')}</p>
-                </div>
-                <div className="p-5 rounded-2xl bg-white border border-md-outlineVariant shadow-none">
-                    <h4 className="font-bold mb-2 text-md-primary">{t('transliterationTitle')}</h4>
-                    <p className="text-xs leading-relaxed">{t('transliterationDesc')}</p>
-                </div>
-            </>
-         )}
+      {/* Footer Info Cards */}
+      <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+         <div className="p-6 bg-white rounded-xl border border-dl-border shadow-sm hover:shadow-md transition-shadow">
+            <h4 className="font-bold text-dl-primary mb-2 text-sm">{t('nounAnchorTitle')}</h4>
+            <p className="text-xs text-dl-textSec leading-relaxed">{t('nounAnchorDesc')}</p>
+         </div>
+         <div className="p-6 bg-white rounded-xl border border-dl-border shadow-sm hover:shadow-md transition-shadow">
+            <h4 className="font-bold text-dl-primary mb-2 text-sm">{t('phoneticKanaTitle')}</h4>
+            <p className="text-xs text-dl-textSec leading-relaxed">{t('phoneticKanaDesc')}</p>
+         </div>
+         <div className="p-6 bg-white rounded-xl border border-dl-border shadow-sm hover:shadow-md transition-shadow">
+            <h4 className="font-bold text-dl-primary mb-2 text-sm">{t('transliterationTitle')}</h4>
+            <p className="text-xs text-dl-textSec leading-relaxed">{t('transliterationDesc')}</p>
+         </div>
       </div>
 
     </main>

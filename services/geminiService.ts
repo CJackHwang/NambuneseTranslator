@@ -1,41 +1,30 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 
 // Strict Keyword Extraction Prompt
-// The AI must ONLY identify words that should be preserved as Kanji (Anchors).
-const KEYWORD_EXTRACTION_INSTRUCTION = `Role: Nambunese (Zhengyu) Keyword Extractor.
+const KEYWORD_EXTRACTION_INSTRUCTION = `Role: Text Pattern Matcher / Keyword Extractor.
 
 Task:
-You will receive input text (already normalized to Japanese Shinjitai).
-Your job is to extract a list of specific words that act as "Semantic Anchors" (Nouns).
-These words will be PRESERVED as Kanji. All other words (verbs, adjectives, particles) will be automatically converted to Kana by a separate algorithm.
+You will receive a raw input string. 
+Your ONLY job is to identify and list specific substrings (Nouns, Pronouns, Anchors) exactly as they appear in the input.
 
-Extraction Rules (Add these to the list):
-1. Common Nouns (e.g. 学校, 飯, 時間, 世界)
-2. Proper Nouns (e.g. 香港, 田中) - Chinese/Japanese names only.
-3. Personal Pronouns (e.g. 我, 你, 佢, 咱们)
-4. Numerals & Quantities (e.g. 一, 十, 百, 2025年)
-5. Idioms/Chengyu acting as nouns (e.g. 一石二鳥)
+CRITICAL RULES:
+1. **NO TRANSLATION**: Do not translate "功能" to "機能". Do not translate "逻辑" to "論理".
+2. **NO CORRECTION**: Do not fix typos. Do not convert Traditional/Simplified Chinese.
+3. **EXACT SUBSTRING MATCH**: The output keywords MUST exist literally in the input string.
+4. **EXCLUSION**: Do NOT include English words, numbers, or punctuation in the list.
 
-Exclusion Rules (DO NOT add these):
-1. Verbs (e.g. 食, 去, 有, 係, 跑) - Unless used as a noun.
-2. Adjectives (e.g. 好, 大, 靚, 快乐)
-3. Adverbs (e.g. 都, 仲, 先, 非常)
-4. Particles (e.g. 咗, 緊, 嘅, 啊, 的, 了)
-5. Punctuation.
-6. **English/Latin Words** (e.g. Apple, iPhone, Bus) - Do NOT extract these. They must be handled physically by the system to prevent transliteration errors.
+Target Patterns to Extract:
+1. Nouns (Common & Proper) e.g. "学校", "飯", "香港"
+2. Personal Pronouns e.g. "我", "你", "佢"
+3. Idioms e.g. "一石二鳥"
 
-Example 1:
 Input: "我明日去学校食飯"
 Output: ["我", "明日", "学校", "飯"]
 
-Example 2:
-Input: "这个很好看"
-Output: ["这个"]
-
-Example 3:
-Input: "I love Hong Kong"
-Output: ["Hong Kong"] 
-(Note: "I" and "love" are English, so they are excluded)
+Input: "功能强大的逻辑"
+Output: ["功能", "逻辑"]
+(Do NOT output "機能", Do NOT output "邏輯")
 `;
 
 export const extractPreservedTerms = async (inputText: string): Promise<string[]> => {
@@ -46,7 +35,7 @@ export const extractPreservedTerms = async (inputText: string): Promise<string[]
   
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash',
-    contents: `Extract keywords from: "${inputText}"`,
+    contents: `Input Text: "${inputText}"`, // Send RAW text
     config: {
       systemInstruction: KEYWORD_EXTRACTION_INSTRUCTION,
       responseMimeType: "application/json",
@@ -66,7 +55,7 @@ export const extractPreservedTerms = async (inputText: string): Promise<string[]
   
   if (!jsonText) throw new Error("Empty AI response received");
 
-  // Basic cleanup just in case
+  // Basic cleanup
   jsonText = jsonText.trim();
   if (jsonText.startsWith("```json")) {
     jsonText = jsonText.replace(/^```json/, "").replace(/```$/, "");
@@ -80,6 +69,6 @@ export const extractPreservedTerms = async (inputText: string): Promise<string[]
     return data.keywords;
   } catch (e) {
     console.error("JSON Parse Error:", e, "Raw Text:", jsonText);
-    return []; // Fail safe: return empty list means everything converts to Kana (safe fallback)
+    return []; 
   }
 };

@@ -14,9 +14,11 @@ export interface TranslationResult {
     source?: string; // jyutping source
   }[];
   processLog?: {
-    step1_normalization: string;
-    step2_ai_tagging: string; // Shows the JSON list of keywords extracted
-    step3_phonetic: string;
+    step1_raw_input: string;      // The original input
+    step2_ai_extraction: string;  // What AI extracted (Raw Keywords)
+    step3_normalization_text: string; // Input converted to Shinjitai
+    step4_normalization_keywords: string; // AI Keywords converted to Shinjitai
+    step5_segmentation: string;   // Final matching result preview
   };
 }
 

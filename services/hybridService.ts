@@ -1,3 +1,4 @@
+
 import { extractPreservedTerms } from './geminiService';
 import { toShinjitai, initShinjitai } from './shinjitaiService';
 import { getJyutping, initDictionary } from './jyutpingService';
@@ -8,62 +9,67 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
   // Step 0: Ensure Dictionaries are Loaded
   await Promise.all([initDictionary(), initShinjitai()]);
 
-  // === STEP 1: Pre-processing (Normalization) ===
-  // Convert Hanzi -> Shinjitai locally FIRST.
-  let preProcessed = toShinjitai(inputText);
-  // Map Punctuation: ， -> 、
-  preProcessed = preProcessed.replace(/，/g, '、');
+  // === PARALLEL PROCESSING ===
+  
+  // Path A: Normalization
+  // Convert original Input -> Shinjitai
+  let normalizedText = toShinjitai(inputText);
+  // Map Punctuation: ， -> 、 (Standardize punctuation)
+  normalizedText = normalizedText.replace(/，/g, '、');
 
-  // === STEP 2: AI Keyword Extraction ===
-  // Get a list of words to KEEP as Kanji (Nouns, Pronouns, etc.)
-  let preservedKeywords: string[] = [];
+  // Path B: AI Extraction (On Original Text)
+  // We send the ORIGINAL text to AI to ensure it sees the context correctly.
+  let rawKeywords: string[] = [];
   try {
-    preservedKeywords = await extractPreservedTerms(preProcessed);
+    rawKeywords = await extractPreservedTerms(inputText);
   } catch (error) {
-    console.error("AI Extraction failed, falling back to full phonetization", error);
-    preservedKeywords = [];
+    console.error("AI Extraction failed", error);
+    rawKeywords = [];
   }
 
-  // Sort keywords by length (descending) to ensure greedy matching
-  // This prevents short words from matching inside longer preserved terms.
-  preservedKeywords.sort((a, b) => b.length - a.length);
+  // === UNIFICATION ===
+  // Convert the AI-extracted keywords to Shinjitai as well.
+  // This ensures that if Input "功能" -> Shinjitai "功能"
+  // And AI extracts "功能" -> Shinjitai "功能"
+  // They match.
+  // Even if Input "逻辑" -> Shinjitai "論理" (hypothetically, if dictionary does that)
+  // AI extracts "逻辑" -> Shinjitai "論理"
+  // They match.
+  const normalizedKeywords = rawKeywords.map(k => toShinjitai(k));
 
-  // === STEP 3: Segmentation & Phonetic Conversion ===
-  // Scan the text. Prioritize: 
-  // 1. AI Preserved Keywords
-  // 2. English/Latin/Numbers (Force Preserve)
-  // 3. Punctuation (Keep)
-  // 4. Everything else -> Kana
+  // Sort keywords by length (descending) to ensure greedy matching
+  normalizedKeywords.sort((a, b) => b.length - a.length);
+
+  // === SEGMENTATION & CONVERSION ===
   
   const segments: { text: string, type: 'KANJI' | 'KANA', reading?: string, source?: string }[] = [];
   let fullJyutping = "";
   let fullZhengyu = "";
-  let fullKanaStr = ""; // Accumulator for the pure phonetic version
+  let fullKanaStr = "";
 
   let i = 0;
-  const len = preProcessed.length;
+  const len = normalizedText.length;
 
   while (i < len) {
     let match: string | null = null;
 
-    // A. Check for AI Preserved Keyword Match
-    for (const keyword of preservedKeywords) {
-      if (preProcessed.startsWith(keyword, i)) {
+    // A. Check for Keyword Match (using normalized arrays)
+    for (const keyword of normalizedKeywords) {
+      if (normalizedText.startsWith(keyword, i)) {
         match = keyword;
-        break; // Found longest match due to sort
+        break; // Found longest match
       }
     }
 
     if (match) {
-      // === KANJI SEGMENT (Matched Keyword) ===
+      // === KANJI SEGMENT (Matched Anchor) ===
       
-      // Get Jyutping for reference 
+      // Get Jyutping for reference (of the normalized term)
       const jpArray = await getJyutping(match);
       const jpString = jpArray.join(' ');
       fullJyutping += jpString + " ";
 
-      // Generate Reading for Ruby (Convert the Jyutping of the Kanji to Kana)
-      // We need to convert word-by-word or char-by-char for the reading
+      // Generate Reading for Ruby
       let reading = "";
       for(const p of jpArray) {
         reading += convertToKana(p);
@@ -75,28 +81,24 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
         reading: reading 
       });
       fullZhengyu += match;
-      fullKanaStr += reading; // For Full Kana copy
+      fullKanaStr += reading;
 
-      // Advance index by length of match
       i += match.length;
     } else {
-      // No keyword match found. Check individual character.
-      const char = preProcessed[i];
+      // No keyword match
+      const char = normalizedText[i];
       
       // B. Check for Latin/ASCII/Numbers (English Protection)
-      // If valid ASCII (letters, numbers), preserve it. 
-      // Do NOT send 'a' to kana converter, or it becomes 'あ'.
-      // Range: 0-9, A-Z, a-z. 
       if (/[a-zA-Z0-9]/.test(char)) {
-         segments.push({ text: char, type: 'KANJI' }); // No reading provided for ASCII
+         segments.push({ text: char, type: 'KANJI' }); // No reading
          fullZhengyu += char;
          fullJyutping += char; 
-         fullKanaStr += char; // Keep English as is in Full Kana mode too
+         fullKanaStr += char;
          i++;
          continue;
       }
 
-      // C. Punctuation/Space
+      // C. Punctuation
       if (/[\s\p{P}]/u.test(char)) {
         segments.push({ text: char, type: 'KANA' });
         fullZhengyu += char;
@@ -106,12 +108,10 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
         continue;
       }
 
-      // D. Fallback: Convert to Kana (Verbs, Adjectives, Particles, unmatched terms)
-      // Convert single char to Jyutping
+      // D. Fallback: Convert to Kana (Verbs, Adjectives, etc.)
       const jpArray = await getJyutping(char);
-      const jp = jpArray[0]; // Single char input
+      const jp = jpArray[0];
       
-      // Convert to Kana
       const kana = convertToKana(jp);
       
       segments.push({ text: kana, type: 'KANA', source: jp });
@@ -125,17 +125,19 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
 
   return {
     original: inputText,
-    cantonese: JSON.stringify(preservedKeywords), // Log the keywords found
+    cantonese: JSON.stringify(rawKeywords),
     jyutping: fullJyutping.trim(),
     zhengyu: fullZhengyu,
     fullKana: fullKanaStr,
-    explanation: "Hybrid Pipeline v5.1 (Keyword List + Ruby Rendering)",
+    explanation: "Hybrid Pipeline v5.1 (Raw AI Extraction + Unified Shinjitai Matching)",
     engine: 'HYBRID',
     segments: segments,
     processLog: {
-      step1_normalization: preProcessed,
-      step2_ai_tagging: JSON.stringify(preservedKeywords, null, 2),
-      step3_phonetic: fullZhengyu
+      step1_raw_input: inputText,
+      step2_ai_extraction: JSON.stringify(rawKeywords),
+      step3_normalization_text: normalizedText,
+      step4_normalization_keywords: JSON.stringify(normalizedKeywords),
+      step5_segmentation: fullZhengyu
     }
   };
 };

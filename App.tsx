@@ -8,11 +8,11 @@ const AppContent: React.FC = () => {
   const { t } = useLanguage();
   
   return (
-    <div className="min-h-screen bg-md-background text-md-onSurface font-sans selection:bg-md-primaryContainer selection:text-md-onPrimaryContainer">
+    <div className="min-h-screen bg-dl-bg text-dl-text font-sans selection:bg-dl-accent selection:text-white">
       <Header />
       <Converter />
       
-      <footer className="py-8 text-center text-md-outline/60 text-xs">
+      <footer className="py-8 text-center text-dl-textSec/60 text-xs">
         <p>© 2025 {t('footerDept')}</p>
         <p className="mt-1">{t('footerStandard')}</p>
       </footer>

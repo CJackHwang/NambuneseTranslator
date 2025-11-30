@@ -17,32 +17,21 @@
               jp: ['"Noto Sans JP"', 'sans-serif'],
             },
             colors: {
-              md: {
-                primary: '#006A6A', // Deep Teal
-                onPrimary: '#FFFFFF',
-                primaryContainer: '#E6F6F6', // Very light teal
-                onPrimaryContainer: '#002020',
-                secondary: '#4A6363',
-                onSecondary: '#FFFFFF',
-                secondaryContainer: '#CCE8E7',
-                onSecondaryContainer: '#051F1F',
-                tertiary: '#4B607C',
-                onTertiary: '#FFFFFF',
-                tertiaryContainer: '#D3E4FF',
-                onTertiaryContainer: '#041C35',
-                surface: '#FFFBFE', // MD3 standard surface
-                surface2: '#F3F5F6', // Slightly darker surface
-                onSurface: '#1C1B1F',
-                onSurfaceVariant: '#49454F',
-                outline: '#79747E',
-                outlineVariant: '#C4C7C5',
-                error: '#B3261E',
-                background: '#FFFBFE',
+              dl: {
+                bg: '#F3F5F7', // DeepL Page Background
+                surface: '#FFFFFF', // Input Background
+                output: '#F7F8FA', // Output Background
+                border: '#E3E5E8', // Subtle Borders
+                text: '#0F2B46', // Deep Navy Text
+                textSec: '#64748B', // Secondary Text
+                primary: '#0F2B46', // Deep Teal/Navy Branding
+                accent: '#006A6A', // The original Teal for highlights
+                hover: '#F1F3F6',
               }
             },
             boxShadow: {
-              'md3-1': '0px 1px 3px 1px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.30)',
-              'md3-2': '0px 2px 6px 2px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.30)',
+              'card': '0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02)',
+              'float': '0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025)',
             }
           }
         }
@@ -50,23 +39,23 @@
     </script>
     <style>
       body {
-        background-color: #FFFBFE;
-        color: #1C1B1F;
+        background-color: #F3F5F7; /* Changed to DeepL gray */
+        color: #0F2B46;
       }
       /* Custom Scrollbar for a cleaner look */
       ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
+        width: 6px;
+        height: 6px;
       }
       ::-webkit-scrollbar-track {
         background: transparent; 
       }
       ::-webkit-scrollbar-thumb {
-        background: #C4C7C5; 
-        border-radius: 4px;
+        background: #CBD5E1; 
+        border-radius: 3px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #79747E; 
+        background: #94A3B8; 
       }
     </style>
   <script type="importmap">
