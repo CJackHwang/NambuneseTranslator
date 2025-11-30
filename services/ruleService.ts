@@ -59,6 +59,7 @@ export const convertRuleBased = async (inputText: string): Promise<TranslationRe
     cantonese: inputText, // No intermediate translation in Pure Mode
     jyutping: jyutpingStr.trim(),
     zhengyu: zhengyuStr,
+    fullKana: zhengyuStr, // In Rule/Pure mode, the output IS the full kana
     explanation: "Pure Phonetic Mode: Direct Character-to-Kana conversion using LSHK dictionary.",
     engine: 'RULE',
     segments: segments

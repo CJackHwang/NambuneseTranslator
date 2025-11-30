@@ -38,6 +38,7 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
   const segments: { text: string, type: 'KANJI' | 'KANA', reading?: string, source?: string }[] = [];
   let fullJyutping = "";
   let fullZhengyu = "";
+  let fullKanaStr = ""; // Accumulator for the pure phonetic version
 
   let i = 0;
   const len = preProcessed.length;
@@ -74,6 +75,7 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
         reading: reading 
       });
       fullZhengyu += match;
+      fullKanaStr += reading; // For Full Kana copy
 
       // Advance index by length of match
       i += match.length;
@@ -89,6 +91,7 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
          segments.push({ text: char, type: 'KANJI' }); // No reading provided for ASCII
          fullZhengyu += char;
          fullJyutping += char; 
+         fullKanaStr += char; // Keep English as is in Full Kana mode too
          i++;
          continue;
       }
@@ -98,6 +101,7 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
         segments.push({ text: char, type: 'KANA' });
         fullZhengyu += char;
         fullJyutping += char + " ";
+        fullKanaStr += char;
         i++;
         continue;
       }
@@ -113,6 +117,7 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
       segments.push({ text: kana, type: 'KANA', source: jp });
       fullZhengyu += kana;
       fullJyutping += jp + " ";
+      fullKanaStr += kana;
       
       i++;
     }
@@ -123,6 +128,7 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
     cantonese: JSON.stringify(preservedKeywords), // Log the keywords found
     jyutping: fullJyutping.trim(),
     zhengyu: fullZhengyu,
+    fullKana: fullKanaStr,
     explanation: "Hybrid Pipeline v5.1 (Keyword List + Ruby Rendering)",
     engine: 'HYBRID',
     segments: segments,

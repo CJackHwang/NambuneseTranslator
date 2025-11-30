@@ -19,6 +19,7 @@ const Converter: React.FC = () => {
   const [areResourcesReady, setAreResourcesReady] = useState(false);
   const [dictLoadingError, setDictLoadingError] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [showCopyFeedback, setShowCopyFeedback] = useState<string | null>(null); // 'MAIN' | 'KANA'
 
   const debounceTimeoutRef = useRef<number | null>(null);
 
@@ -99,6 +100,12 @@ const Converter: React.FC = () => {
           setDictLoadingError("Retry failed.");
       }
   }
+
+  const handleCopy = (text: string, type: 'MAIN' | 'KANA') => {
+      navigator.clipboard.writeText(text);
+      setShowCopyFeedback(type);
+      setTimeout(() => setShowCopyFeedback(null), 2000);
+  };
 
   return (
     <main className="max-w-5xl mx-auto px-4 pb-12 pt-6 w-full overflow-visible">
@@ -221,15 +228,16 @@ const Converter: React.FC = () => {
                   </div>
               ) : result ? (
                   <div className="flex-1 flex flex-col gap-6 animate-fade-in-up">
-                      <div className="text-3xl sm:text-4xl leading-relaxed font-jp font-medium text-md-onSurface break-words">
+                      {/* Reduced font size to text-xl/2xl and increased leading for Ruby legibility */}
+                      <div className="text-xl sm:text-2xl leading-loose font-jp font-medium text-md-onSurface break-words">
                         {mode === 'HYBRID' && result.segments ? (
                             <div className="flex flex-wrap items-baseline gap-y-2">
                                 {result.segments.map((seg, idx) => {
                                     if (seg.type === 'KANJI' && seg.reading) {
                                         return (
-                                            <ruby key={idx} className="mr-0.5">
+                                            <ruby key={idx} className="mr-0.5 group cursor-help">
                                                 {seg.text}
-                                                <rt className="text-[0.4em] text-md-secondary font-normal select-none">{seg.reading}</rt>
+                                                <rt className="text-[0.55em] text-md-secondary font-normal select-none group-hover:text-md-primary transition-colors">{seg.reading}</rt>
                                             </ruby>
                                         );
                                     }
@@ -242,7 +250,7 @@ const Converter: React.FC = () => {
                         )}
                       </div>
                       
-                      {/* Secondary Info: Hide Jyutping in main view for Hybrid mode to reduce clutter */}
+                      {/* Secondary Info */}
                       <div className="mt-auto pt-6 border-t border-md-outlineVariant/20">
                         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
                             <div>
@@ -250,15 +258,37 @@ const Converter: React.FC = () => {
                                     {mode === 'HYBRID' ? 'Nambu Standard v5.1 (Ruby Mode)' : mode === 'PURE' ? 'Transliteration Mode' : 'Text Conversion'}
                                 </p>
                             </div>
-                            <button 
-                                onClick={() => {
-                                    navigator.clipboard.writeText(result.zhengyu);
-                                }}
-                                className="self-end sm:self-auto flex items-center gap-2 px-4 py-2 text-sm font-bold text-md-primary bg-md-primary/5 hover:bg-md-primary/10 border border-md-primary/10 rounded-full transition-colors group"
-                            >
-                                <span>{t('copy')}</span>
-                                <svg className="group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                            </button>
+                            
+                            <div className="self-end sm:self-auto flex items-center gap-2">
+                                {/* Copy Full Kana Button (Visible mainly in Hybrid mode, but available if fullKana exists) */}
+                                {result.fullKana && mode === 'HYBRID' && (
+                                    <button 
+                                        onClick={() => handleCopy(result.fullKana || '', 'KANA')}
+                                        className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-md-secondary bg-white hover:bg-md-secondaryContainer border border-md-outlineVariant/50 rounded-lg transition-colors group"
+                                        title={t('copyKana')}
+                                    >
+                                        <span>{showCopyFeedback === 'KANA' ? t('copied') : t('copyKana')}</span>
+                                        {showCopyFeedback === 'KANA' ? (
+                                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                        ) : (
+                                            <span className="text-[10px] px-1 border border-current rounded opacity-50">あ</span>
+                                        )}
+                                    </button>
+                                )}
+
+                                {/* Main Copy Button */}
+                                <button 
+                                    onClick={() => handleCopy(result.zhengyu, 'MAIN')}
+                                    className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-md-primary bg-md-primary/5 hover:bg-md-primary/10 border border-md-primary/10 rounded-full transition-colors group"
+                                >
+                                    <span>{showCopyFeedback === 'MAIN' ? t('copied') : t('copy')}</span>
+                                    {showCopyFeedback === 'MAIN' ? (
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                    ) : (
+                                        <svg className="group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                       </div>
                   </div>
