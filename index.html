@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
+        darkMode: 'class',
         theme: {
           extend: {
             fontFamily: {
@@ -18,15 +19,26 @@
             },
             colors: {
               dl: {
-                bg: '#F3F5F7', // DeepL Page Background
-                surface: '#FFFFFF', // Input Background
-                output: '#F7F8FA', // Output Background
-                border: '#E3E5E8', // Subtle Borders
-                text: '#0F2B46', // Deep Navy Text
-                textSec: '#64748B', // Secondary Text
+                bg: '#F3F5F7', // DeepL Page Background (Light)
+                surface: '#FFFFFF', // Input Background (Light)
+                output: '#F7F8FA', // Output Background (Light)
+                border: '#E3E5E8', // Subtle Borders (Light)
+                text: '#0F2B46', // Deep Navy Text (Light)
+                textSec: '#64748B', // Secondary Text (Light)
                 primary: '#0F2B46', // Deep Teal/Navy Branding
                 accent: '#006A6A', // The original Teal for highlights
                 hover: '#F1F3F6',
+                
+                // Dark Mode Colors (Slate/Navy based)
+                dark: {
+                  bg: '#0f172a', // Slate 900
+                  surface: '#1e293b', // Slate 800
+                  output: '#1e293b', // Slate 800 (Same as surface for unified look or slightly diff)
+                  border: '#334155', // Slate 700
+                  text: '#f1f5f9', // Slate 100
+                  textSec: '#94a3b8', // Slate 400
+                  hover: '#334155',
+                }
               }
             },
             boxShadow: {
@@ -39,9 +51,17 @@
     </script>
     <style>
       body {
-        background-color: #F3F5F7; /* Changed to DeepL gray */
+        /* Default Light */
+        background-color: #F3F5F7;
         color: #0F2B46;
+        transition: background-color 0.3s ease, color 0.3s ease;
       }
+      /* Dark Mode Overrides applied via class on html/body */
+      .dark body {
+        background-color: #0f172a;
+        color: #f1f5f9;
+      }
+      
       /* Custom Scrollbar for a cleaner look */
       ::-webkit-scrollbar {
         width: 6px;
@@ -53,6 +73,9 @@
       ::-webkit-scrollbar-thumb {
         background: #CBD5E1; 
         border-radius: 3px;
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #475569;
       }
       ::-webkit-scrollbar-thumb:hover {
         background: #94A3B8; 

@@ -68,6 +68,21 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
     }
 
     if (match) {
+      // === Keyword Segment Found ===
+
+      // CRITICAL BUG FIX:
+      // If the matched keyword is pure ASCII/English (e.g., "Nano", "AI", "Suno"), 
+      // treat it as Text/Kanji segment WITHOUT reading to prevent Kana conversion.
+      // This overrides AI tagging mistakes where English is tagged as a noun.
+      if (/^[\x00-\x7F]+$/.test(match)) {
+         segments.push({ text: match, type: 'KANJI' }); // No reading
+         fullZhengyu += match;
+         fullJyutping += match + " ";
+         fullKanaStr += match;
+         i += match.length;
+         continue;
+      }
+
       // === KANJI SEGMENT (Matched Anchor) ===
       
       // Get Jyutping for reference (of the normalized term)

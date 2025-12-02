@@ -1,4 +1,3 @@
-
 import { AISettings } from '../types';
 
 const SETTINGS_KEY = 'zhengyu_ai_settings_v1';
@@ -10,7 +9,8 @@ export const DEFAULT_SETTINGS: AISettings = {
   openaiKey: "",
   openaiModel: "Qwen/Qwen3-8B",
   geminiKey: "",
-  geminiModel: "gemini-2.5-flash"
+  geminiModel: "gemini-2.5-flash",
+  highPrecisionMode: false
 };
 
 export const getSettings = (): AISettings => {

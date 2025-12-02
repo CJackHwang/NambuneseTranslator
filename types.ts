@@ -47,4 +47,6 @@ export interface AISettings {
   // Gemini
   geminiKey: string;
   geminiModel: string;
+  // Advanced
+  highPrecisionMode: boolean; // Enables 3-pass concurrent extraction
 }
