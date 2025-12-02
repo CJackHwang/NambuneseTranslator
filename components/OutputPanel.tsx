@@ -38,7 +38,7 @@ const OutputPanel: React.FC<OutputPanelProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-dl-output dark:bg-dl-dark-surface relative h-full min-h-[300px] md:min-h-auto border-t md:border-t-0 md:border-l border-dl-border dark:border-dl-dark-border transition-colors">
+    <div className="flex-1 flex flex-col bg-dl-output dark:bg-dl-dark-surface relative h-full min-h-[300px] max-h-[60vh] md:max-h-full md:min-h-auto border-t md:border-t-0 md:border-l border-dl-border dark:border-dl-dark-border transition-colors">
       {/* Toolbar */}
       <div className="h-12 border-b border-dl-border dark:border-dl-dark-border flex items-center justify-between px-2 bg-dl-output md:bg-dl-output/50 dark:bg-dl-dark-surface md:dark:bg-dl-dark-surface/50 shrink-0 transition-colors">
         <div className="flex items-center gap-1">

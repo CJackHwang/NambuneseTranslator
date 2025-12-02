@@ -40,7 +40,7 @@ const InputPanel: React.FC<InputPanelProps> = ({
   const showManualButton = !isRealTime || mode === 'HYBRID';
 
   return (
-    <div className="flex-1 flex flex-col relative h-full min-h-[300px] md:min-h-auto">
+    <div className="flex-1 flex flex-col relative h-full min-h-[300px] max-h-[50vh] md:max-h-full md:min-h-auto">
       {/* Toolbar */}
       <div className="h-12 border-b border-dl-border dark:border-dl-dark-border flex items-center px-4 bg-white dark:bg-dl-dark-surface shrink-0 justify-between transition-colors">
         <span className="text-sm font-bold text-dl-accent dark:text-teal-400 uppercase tracking-wide">{t('inputLabel')}</span>
