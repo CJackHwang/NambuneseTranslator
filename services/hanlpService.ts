@@ -39,26 +39,63 @@ export async function callHanLPPOS(text: string, options?: {
 }): Promise<HanLPPOSResult> {
     const { language = 'zh', pos = 'ctb', coarse = false } = options || {};
 
-    const response = await fetch('/api/hanlp', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text, language, pos, coarse }),
-    });
+    try {
+        const response = await fetch('/api/hanlp', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ text, language, pos, coarse }),
+        });
 
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HanLP API Error: ${response.status}`);
+        const responseText = await response.text();
+
+        if (!response.ok) {
+            // 解析错误信息
+            let errorMsg = responseText;
+            try {
+                const json = JSON.parse(responseText);
+                if (json.error) errorMsg = json.error;
+            } catch (e) { }
+            throw new Error(`HanLP API Error (${response.status}): ${errorMsg}`);
+        }
+
+        const data = JSON.parse(responseText);
+
+        let result: HanLPPOSResult = { tok: [], pos: [] };
+
+        // 兼容性处理：如果返回的是 BRAT 格式的字符串数组（Node Proxy 转发的原始数据）
+        if (Array.isArray(data)) {
+            for (const sentence of (data as string[])) {
+                const lines = sentence.split('\n');
+                const tokens: string[] = [];
+                const tags: string[] = [];
+
+                for (const line of lines) {
+                    // 解析格式如: "T1 NR 0 2 南武"
+                    const match = line.match(/^T\d+\s+(\S+)\s+\d+\s+\d+\s+(.+)$/);
+                    if (match) {
+                        tags.push(match[1]);
+                        tokens.push(match[2]);
+                    }
+                }
+                if (tokens.length > 0) {
+                    result.tok.push(tokens);
+                    result.pos.push(tags);
+                }
+            }
+        } else if (data.tok && data.pos) {
+            // 如果代理已经处理成了标准格式
+            result = data;
+        } else {
+            console.warn("Unknown HanLP response format:", data);
+        }
+
+        return result;
+
+    } catch (error: any) {
+        throw new Error(error.message || 'HanLP Network Error');
     }
-
-    const data = await response.json();
-
-    if (!data.tok || !data.pos) {
-        throw new Error('Invalid response format from HanLP API');
-    }
-
-    return data as HanLPPOSResult;
 }
 
 /**

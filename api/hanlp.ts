@@ -21,7 +21,7 @@ function generateEHeader(): string {
         },
         buffer
     );
-    return encrypted.toString('hex');
+    return encrypted.toString('base64');
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
