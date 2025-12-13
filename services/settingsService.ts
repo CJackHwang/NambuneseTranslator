@@ -3,14 +3,12 @@ import { AISettings } from '../types';
 const SETTINGS_KEY = 'zhengyu_ai_settings_v1';
 
 export const DEFAULT_SETTINGS: AISettings = {
-  provider: 'BUILTIN',
-  builtinModel: "Qwen/Qwen3-8B",
+  provider: 'HANLP',
   openaiBaseUrl: "https://api.siliconflow.cn/v1/chat/completions",
   openaiKey: "",
   openaiModel: "Qwen/Qwen3-8B",
   geminiKey: "",
-  geminiModel: "gemini-2.5-flash",
-  highPrecisionMode: false
+  geminiModel: "gemini-2.5-flash"
 };
 
 export const getSettings = (): AISettings => {

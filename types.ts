@@ -35,11 +35,10 @@ export enum ConversionStatus {
 
 export type TranslationEngine = 'RULE' | 'AI' | 'HYBRID';
 
-export type AIProvider = 'BUILTIN' | 'OPENAI' | 'GEMINI';
+export type AIProvider = 'HANLP' | 'OPENAI' | 'GEMINI';
 
 export interface AISettings {
   provider: AIProvider;
-  builtinModel: string;
   // OpenAI Compatible
   openaiBaseUrl: string;
   openaiKey: string;
@@ -47,6 +46,4 @@ export interface AISettings {
   // Gemini
   geminiKey: string;
   geminiModel: string;
-  // Advanced
-  highPrecisionMode: boolean; // Enables 3-pass concurrent extraction
 }
