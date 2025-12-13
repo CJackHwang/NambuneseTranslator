@@ -77,9 +77,7 @@ export default defineConfig({
 
             const responseText = await hanlpRes.text();
 
-            // 调试日志
-            console.log('[HanLP Debug] Status:', hanlpRes.status);
-            console.log('[HanLP Debug] Response:', responseText.substring(0, 500));
+
 
             res.setHeader('Content-Type', 'application/json');
 
