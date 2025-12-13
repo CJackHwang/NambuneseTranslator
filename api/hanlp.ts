@@ -58,6 +58,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 'Accept': '*/*',
                 'Origin': 'https://hanlp.hankcs.com',
                 'Referer': 'https://hanlp.hankcs.com/demos/pos.html',
+                'X-Forwarded-For': (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '',
+                'X-Real-IP': (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '',
+                'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             },
             body: bodyParams.toString(),
         });
