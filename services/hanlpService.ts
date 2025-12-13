@@ -107,8 +107,19 @@ export const extractKeywordsWithHanLP = async (
             throw new Error("Invalid JSON response from HanLP");
         }
 
+        if (Array.isArray(data)) {
+            // 有些情况下可能返回数组，尝试取第一个元素
+            if (data.length > 0 && data[0] && (data[0].tok || data[0].pos)) {
+                data = data[0];
+            } else {
+                console.error("HanLP returned an array but it doesn't contain valid data:", JSON.stringify(data));
+                // 如果是包含错误信息的数组，这里也能打印出来
+                throw new Error(`HanLP Error: ${JSON.stringify(data)}`);
+            }
+        }
+
         if (!data || !data.tok || !data.pos) {
-            console.error("HanLP Invalid Data Structure:", data);
+            console.error("HanLP Invalid Data Structure (Full):", JSON.stringify(data));
             throw new Error("HanLP response missing 'tok' or 'pos' fields");
         }
 
