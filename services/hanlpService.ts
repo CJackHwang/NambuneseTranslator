@@ -29,107 +29,37 @@ export interface HanLPPOSResult {
     pos: string[][];  // 词性标注
 }
 
-// HanLP RSA 公钥
-const PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----
-MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDHLWIFQOZ/uh379CWuF96q1Eif
-KNx5Tpu/M9dDsOPYmKwraqc/MOl++cJP0u99qugqhMYm535xcnWl/Z14ZNGvVhEB
-sHEdcWT/CvBbSeKIA24eyrrqoKafNVZ0aOE95UqM5Q7630cBnhdo+LOxBlhaMy+8
-LaK1tFV4AFNMR6fISwIDAQAB
------END PUBLIC KEY-----`;
-
-// 兼容 Vite/ESM 导入 JSEncrypt
-import JSEncryptLib from 'jsencrypt';
-// @ts-ignore
-const JSEncrypt = JSEncryptLib.default || JSEncryptLib;
-
-function generateEHeader(): string {
-    try {
-        const timestamp = Math.floor(Date.now() / 1000).toString();
-        const encrypt = new JSEncrypt();
-        encrypt.setPublicKey(PUBLIC_KEY_PEM);
-        const encrypted = encrypt.encrypt(timestamp);
-        return encrypted || '';
-    } catch (e) {
-        console.error("Encryption failed:", e);
-        return '';
-    }
-}
-
 /**
- * 调用 HanLP POS API（通过 corsproxy.io 代理）
+ * 调用 HanLP POS API（通过 Vercel 代理）
  */
-export const extractKeywordsWithHanLP = async (
-    text: string,
-    options: {
-        language?: string;
-        pos?: string;
-        coarse?: boolean;
-    } = {}
-): Promise<HanLPPOSResult> => {
-    try {
-        const eHeader = generateEHeader();
-        const bodyParams = new URLSearchParams({
-            text,
-            coarse: (options.coarse || false).toString(),
-            language: options.language || 'zh',
-            pos: options.pos || 'ctb',
-            v1: 'false'
-        });
+export async function callHanLPPOS(text: string, options?: {
+    language?: 'zh' | 'en' | 'ja' | 'mul';
+    pos?: 'ctb' | 'pku' | '863';
+    coarse?: boolean;
+}): Promise<HanLPPOSResult> {
+    const { language = 'zh', pos = 'ctb', coarse = false } = options || {};
 
-        // 尝试直连 HanLP API (测试是否支持 CORS)
-        // 如果用户的 IP 是干净的，且 HanLP 允许跨域（或允许特定 Origin），这可能会成功
-        const targetUrl = 'https://hanlp.hankcs.com/backend/v2/pos';
+    const response = await fetch('/api/hanlp', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text, language, pos, coarse }),
+    });
 
-        // 注意：直连时浏览器会自动处理 Origin/Referer，我们无法伪造，
-        // 只能寄希望于 HanLP 后端允许宽容的 CORS 策略
-        const response = await fetch(targetUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                'e': eHeader,
-            },
-            body: bodyParams.toString()
-        });
-
-        if (!response.ok) {
-            console.error(`HanLP Proxy Error: ${response.status} ${response.statusText}`);
-            throw new Error(`HanLP API error: ${response.status} ${response.statusText}`);
-        }
-
-        const textData = await response.text();
-        // console.log("HanLP Raw Response:", textData.substring(0, 100) + "..."); // Debug log
-
-        let data;
-        try {
-            data = JSON.parse(textData);
-        } catch (e) {
-            console.error("HanLP Response Parse Error. Raw:", textData);
-            throw new Error("Invalid JSON response from HanLP");
-        }
-
-        if (Array.isArray(data)) {
-            // 有些情况下可能返回数组，尝试取第一个元素
-            if (data.length > 0 && data[0] && (data[0].tok || data[0].pos)) {
-                data = data[0];
-            } else {
-                console.error("HanLP returned an array but it doesn't contain valid data:", JSON.stringify(data));
-                // 如果是包含错误信息的数组，这里也能打印出来
-                throw new Error(`HanLP Error: ${JSON.stringify(data)}`);
-            }
-        }
-
-        if (!data || !data.tok || !data.pos) {
-            console.error("HanLP Invalid Data Structure (Full):", JSON.stringify(data));
-            throw new Error("HanLP response missing 'tok' or 'pos' fields");
-        }
-
-        return data as HanLPPOSResult;
-
-    } catch (error) {
-        console.error('HanLP extraction error:', error);
-        throw error;
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HanLP API Error: ${response.status}`);
     }
-};
+
+    const data = await response.json();
+
+    if (!data.tok || !data.pos) {
+        throw new Error('Invalid response format from HanLP API');
+    }
+
+    return data as HanLPPOSResult;
+}
 
 /**
  * 从 HanLP 词性标注结果中提取需要保留的词语（名词、代词、数词）
@@ -162,22 +92,14 @@ export function extractPreservedTermsFromPOS(result: HanLPPOSResult): string[] {
  * 主函数：调用 HanLP 并提取关键词
  * 可直接替代 geminiService 的 extractPreservedTerms
  */
-export async function extractTermsWithHanLP(
-    text: string,
-    language: string = 'zh',
-    posModel: string = 'ctb'
-): Promise<string[]> {
+export async function extractTermsWithHanLP(text: string): Promise<string[]> {
     if (!text || !text.trim()) {
         return [];
     }
 
     try {
-        const hanlpResult = await extractKeywordsWithHanLP(text, {
-            language,
-            pos: posModel,
-            coarse: false
-        });
-        return extractPreservedTermsFromPOS(hanlpResult);
+        const posResult = await callHanLPPOS(text);
+        return extractPreservedTermsFromPOS(posResult);
     } catch (error) {
         console.error('HanLP extraction error:', error);
         throw error;
