@@ -37,14 +37,22 @@ sHEdcWT/CvBbSeKIA24eyrrqoKafNVZ0aOE95UqM5Q7630cBnhdo+LOxBlhaMy+8
 LaK1tFV4AFNMR6fISwIDAQAB
 -----END PUBLIC KEY-----`;
 
-import JSEncrypt from 'jsencrypt';
+// 兼容 Vite/ESM 导入 JSEncrypt
+import JSEncryptLib from 'jsencrypt';
+// @ts-ignore
+const JSEncrypt = JSEncryptLib.default || JSEncryptLib;
 
 function generateEHeader(): string {
-    const timestamp = Math.floor(Date.now() / 1000).toString();
-    const encrypt = new JSEncrypt();
-    encrypt.setPublicKey(PUBLIC_KEY_PEM);
-    const encrypted = encrypt.encrypt(timestamp);
-    return encrypted || '';
+    try {
+        const timestamp = Math.floor(Date.now() / 1000).toString();
+        const encrypt = new JSEncrypt();
+        encrypt.setPublicKey(PUBLIC_KEY_PEM);
+        const encrypted = encrypt.encrypt(timestamp);
+        return encrypted || '';
+    } catch (e) {
+        console.error("Encryption failed:", e);
+        return '';
+    }
 }
 
 /**
@@ -84,15 +92,26 @@ export const extractKeywordsWithHanLP = async (
         });
 
         if (!response.ok) {
-            // 如果代理失败，尝试直连（万一没有 CORS）
-            if (response.status === 403 || response.status === 0) {
-                console.warn('Proxy failed, trying direct connection...');
-                // Fallback request logic could go here if needed, but usually CORS blocks it.
-            }
+            console.error(`HanLP Proxy Error: ${response.status} ${response.statusText}`);
             throw new Error(`HanLP API error: ${response.status} ${response.statusText}`);
         }
 
-        const data = await response.json();
+        const textData = await response.text();
+        // console.log("HanLP Raw Response:", textData.substring(0, 100) + "..."); // Debug log
+
+        let data;
+        try {
+            data = JSON.parse(textData);
+        } catch (e) {
+            console.error("HanLP Response Parse Error. Raw:", textData);
+            throw new Error("Invalid JSON response from HanLP");
+        }
+
+        if (!data || !data.tok || !data.pos) {
+            console.error("HanLP Invalid Data Structure:", data);
+            throw new Error("HanLP response missing 'tok' or 'pos' fields");
+        }
+
         return data as HanLPPOSResult;
 
     } catch (error) {
