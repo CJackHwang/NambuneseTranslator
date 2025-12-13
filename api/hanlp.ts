@@ -49,6 +49,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             v1: 'false'
         });
 
+        // 获取客户端真实 IP
+        const forwardedFor = req.headers['x-forwarded-for'] as string;
+        const clientIp = forwardedFor ? forwardedFor.split(',')[0].trim() : (req.socket.remoteAddress || '');
+
         // 调用 HanLP API
         const response = await fetch('https://hanlp.hankcs.com/backend/v2/pos', {
             method: 'POST',
@@ -58,11 +62,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 'Accept': '*/*',
                 'Origin': 'https://hanlp.hankcs.com',
                 'Referer': 'https://hanlp.hankcs.com/demos/pos.html',
-                'X-Forwarded-For': (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '',
-                'X-Real-IP': (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '',
+                'X-Forwarded-For': clientIp,
+                'X-Real-IP': clientIp,
                 'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             },
             body: bodyParams.toString(),
+            // @ts-ignore
+            duplex: 'half' // Node.js fetch fix for some versions
         });
 
         const responseText = await response.text();
