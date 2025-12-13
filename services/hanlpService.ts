@@ -29,37 +29,77 @@ export interface HanLPPOSResult {
     pos: string[][];  // 词性标注
 }
 
-/**
- * 调用 HanLP POS API（通过 Vercel 代理）
- */
-export async function callHanLPPOS(text: string, options?: {
-    language?: 'zh' | 'en' | 'ja' | 'mul';
-    pos?: 'ctb' | 'pku' | '863';
-    coarse?: boolean;
-}): Promise<HanLPPOSResult> {
-    const { language = 'zh', pos = 'ctb', coarse = false } = options || {};
+// HanLP RSA 公钥
+const PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----
+MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDHLWIFQOZ/uh379CWuF96q1Eif
+KNx5Tpu/M9dDsOPYmKwraqc/MOl++cJP0u99qugqhMYm535xcnWl/Z14ZNGvVhEB
+sHEdcWT/CvBbSeKIA24eyrrqoKafNVZ0aOE95UqM5Q7630cBnhdo+LOxBlhaMy+8
+LaK1tFV4AFNMR6fISwIDAQAB
+-----END PUBLIC KEY-----`;
 
-    const response = await fetch('/api/hanlp', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text, language, pos, coarse }),
-    });
+import JSEncrypt from 'jsencrypt';
 
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HanLP API Error: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    if (!data.tok || !data.pos) {
-        throw new Error('Invalid response format from HanLP API');
-    }
-
-    return data as HanLPPOSResult;
+function generateEHeader(): string {
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const encrypt = new JSEncrypt();
+    encrypt.setPublicKey(PUBLIC_KEY_PEM);
+    const encrypted = encrypt.encrypt(timestamp);
+    return encrypted || '';
 }
+
+/**
+ * 调用 HanLP POS API（通过 corsproxy.io 代理）
+ */
+export const extractKeywordsWithHanLP = async (
+    text: string,
+    options: {
+        language?: string;
+        pos?: string;
+        coarse?: boolean;
+    } = {}
+): Promise<HanLPPOSResult> => {
+    try {
+        const eHeader = generateEHeader();
+        const bodyParams = new URLSearchParams({
+            text,
+            coarse: (options.coarse || false).toString(),
+            language: options.language || 'zh',
+            pos: options.pos || 'ctb',
+            v1: 'false'
+        });
+
+        // 使用 corsproxy.io 绕过 CORS，并直接利用用户浏览器 IP 请求，避开 Vercel IP 封锁
+        const targetUrl = 'https://hanlp.hankcs.com/backend/v2/pos';
+        const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(targetUrl);
+
+        // 注意：通过代理时，部分 headers 可能被过滤，但我们尽量带上
+        const response = await fetch(proxyUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                'e': eHeader,
+                // 这里不需要伪造 Origin/Referer，因为是通过代理转发，或者由浏览器直接发出
+            },
+            body: bodyParams.toString()
+        });
+
+        if (!response.ok) {
+            // 如果代理失败，尝试直连（万一没有 CORS）
+            if (response.status === 403 || response.status === 0) {
+                console.warn('Proxy failed, trying direct connection...');
+                // Fallback request logic could go here if needed, but usually CORS blocks it.
+            }
+            throw new Error(`HanLP API error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data as HanLPPOSResult;
+
+    } catch (error) {
+        console.error('HanLP extraction error:', error);
+        throw error;
+    }
+};
 
 /**
  * 从 HanLP 词性标注结果中提取需要保留的词语（名词、代词、数词）
@@ -92,14 +132,22 @@ export function extractPreservedTermsFromPOS(result: HanLPPOSResult): string[] {
  * 主函数：调用 HanLP 并提取关键词
  * 可直接替代 geminiService 的 extractPreservedTerms
  */
-export async function extractTermsWithHanLP(text: string): Promise<string[]> {
+export async function extractTermsWithHanLP(
+    text: string,
+    language: string = 'zh',
+    posModel: string = 'ctb'
+): Promise<string[]> {
     if (!text || !text.trim()) {
         return [];
     }
 
     try {
-        const posResult = await callHanLPPOS(text);
-        return extractPreservedTermsFromPOS(posResult);
+        const hanlpResult = await extractKeywordsWithHanLP(text, {
+            language,
+            pos: posModel,
+            coarse: false
+        });
+        return extractPreservedTermsFromPOS(hanlpResult);
     } catch (error) {
         console.error('HanLP extraction error:', error);
         throw error;
