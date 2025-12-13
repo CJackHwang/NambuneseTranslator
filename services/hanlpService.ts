@@ -76,17 +76,17 @@ export const extractKeywordsWithHanLP = async (
             v1: 'false'
         });
 
-        // 使用 corsproxy.io 绕过 CORS，并直接利用用户浏览器 IP 请求，避开 Vercel IP 封锁
+        // 尝试直连 HanLP API (测试是否支持 CORS)
+        // 如果用户的 IP 是干净的，且 HanLP 允许跨域（或允许特定 Origin），这可能会成功
         const targetUrl = 'https://hanlp.hankcs.com/backend/v2/pos';
-        const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(targetUrl);
 
-        // 注意：通过代理时，部分 headers 可能被过滤，但我们尽量带上
-        const response = await fetch(proxyUrl, {
+        // 注意：直连时浏览器会自动处理 Origin/Referer，我们无法伪造，
+        // 只能寄希望于 HanLP 后端允许宽容的 CORS 策略
+        const response = await fetch(targetUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
                 'e': eHeader,
-                // 这里不需要伪造 Origin/Referer，因为是通过代理转发，或者由浏览器直接发出
             },
             body: bodyParams.toString()
         });
