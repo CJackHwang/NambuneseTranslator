@@ -71,57 +71,16 @@ export default defineConfig({
                 'Accept': '*/*',
                 'Origin': 'https://hanlp.hankcs.com',
                 'Referer': 'https://hanlp.hankcs.com/demos/pos.html',
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
               },
               body: params.toString(),
             });
 
-            const responseText = await hanlpRes.text();
-
-
-
+            // 直接透传响应，与 api/hanlp.ts 保持一致
+            const data = await hanlpRes.json();
             res.setHeader('Content-Type', 'application/json');
-
-            if (responseText.includes('频繁') || responseText.includes('too many')) {
-              res.statusCode = 429;
-              res.end(JSON.stringify({ error: 'Rate limited by HanLP API' }));
-              return;
-            }
-
-            try {
-              const rawData = JSON.parse(responseText);
-
-              // HanLP 返回的是 BRAT 注释格式的字符串数组
-              // 需要解析并转换为 {tok:[], pos:[]} 格式
-              const result: { tok: string[][], pos: string[][] } = { tok: [], pos: [] };
-
-              if (Array.isArray(rawData)) {
-                for (const sentence of rawData) {
-                  const lines = sentence.split('\n');
-                  const tokens: string[] = [];
-                  const tags: string[] = [];
-
-                  for (const line of lines) {
-                    // 解析格式如: "T1 NR 0 2 南武"
-                    const match = line.match(/^T\d+\s+(\S+)\s+\d+\s+\d+\s+(.+)$/);
-                    if (match) {
-                      tags.push(match[1]);
-                      tokens.push(match[2]);
-                    }
-                  }
-
-                  if (tokens.length > 0) {
-                    result.tok.push(tokens);
-                    result.pos.push(tags);
-                  }
-                }
-              }
-
-              res.statusCode = 200;
-              res.end(JSON.stringify(result));
-            } catch {
-              res.statusCode = 502;
-              res.end(JSON.stringify({ error: 'Invalid HanLP response', raw: responseText.substring(0, 200) }));
-            }
+            res.statusCode = hanlpRes.status;
+            res.end(JSON.stringify(data));
           } catch (e: any) {
             res.statusCode = 500;
             res.end(JSON.stringify({ error: e.message }));
