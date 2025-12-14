@@ -4,8 +4,6 @@
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/CJackHwang/NambuneseTranslator)
 
-</div>
-
 ## ✨ 功能特色
 
 - **粤语假名转换** - 基于粤拼将汉字转换为标准假名
@@ -48,26 +46,37 @@ npm run build
 
 ```
 NambuneseTranslator/
-├── api/                 # Vercel Serverless Functions
-│   └── hanlp.ts         # HanLP API 代理 (处理鉴权)
-├── components/          # React 组件
-├── services/            # 核心服务
-│   ├── hanlpService.ts  # HanLP 词性标注集成
-│   ├── geminiService.ts # AI 关键词提取
-│   ├── jyutpingService.ts # 粤拼字典
-│   ├── kanaConverter.ts # 假名转换逻辑
-│   └── shinjitaiService.ts # 新字体转换
-├── contexts/            # React Context (主题, 语言)
-├── hooks/               # 自定义 Hooks
-└── tailwind.config.js   # Tailwind 样式配置
+├── api/                    # Vercel Serverless Functions
+│   └── hanlp.ts            # HanLP API 代理 (处理鉴权)
+├── components/             # React 组件
+│   ├── Converter.tsx       # 主转换器容器
+│   ├── InputPanel.tsx      # 输入面板
+│   ├── OutputPanel.tsx     # 输出面板 (含 Ruby 注音)
+│   ├── Header.tsx          # 页头导航
+│   ├── SettingsModal.tsx   # 设置弹窗
+│   ├── DocsModal.tsx       # 文档弹窗
+│   └── ProcessDetails.tsx  # 转换过程详情
+├── services/               # 核心服务
+│   ├── hanlpService.ts     # HanLP 词性标注
+│   ├── geminiService.ts    # Gemini AI 服务
+│   ├── hybridService.ts    # 混合词性标注策略
+│   ├── jyutpingService.ts  # 粤拼字典查询
+│   ├── kanaConverter.ts    # 粤拼→假名转换
+│   ├── shinjitaiService.ts # 新字体转换
+│   ├── ttsService.ts       # 语音合成
+│   ├── translations.ts     # 多语言翻译
+│   └── settingsService.ts  # 设置持久化
+├── contexts/               # React Context
+├── hooks/                  # 自定义 Hooks
+└── types.ts                # TypeScript 类型定义
 ```
 
 ## 🔧 技术栈
 
 - **前端**: React 18 + TypeScript + Vite
-- **样式**: TailwindCSS (Local Build)
+- **样式**: TailwindCSS
 - **部署**: Vercel (Hosting + Serverless Functions)
-- **NLP**: HanLP API (Client -> Serverless Proxy -> HanLP)
+- **NLP**: HanLP API (通过 Serverless 代理)
 
 ## 📝 License
 
