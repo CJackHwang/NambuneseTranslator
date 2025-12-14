@@ -54,6 +54,10 @@ export const TRANSLATIONS = {
     themeLight: "Light",
     themeDark: "Dark",
     themeSystem: "Auto",
+    docsTitle: "Zhengyu Specification v5.1",
+    docsButton: "Specification",
+    close: "Close",
+    disclaimer: "This project is set in the fictional world of the \"Nambu Democratic Republic\". All organization names and settings are creative fiction and have no connection to reality.",
   },
   zh: {
     title: "南武正语翻译器",
@@ -108,6 +112,10 @@ export const TRANSLATIONS = {
     themeLight: "浅色",
     themeDark: "深色",
     themeSystem: "跟随系统",
+    docsTitle: "正语日新标 v5.1",
+    docsButton: "规范标准",
+    close: "隐藏",
+    disclaimer: "本项目基于虚构的「南武民主共和国」世界观，所有机构名称、设定均为创作虎构，与现实世界无关。",
   },
   ja: {
     title: "南武正語翻訳機",
@@ -162,5 +170,9 @@ export const TRANSLATIONS = {
     themeLight: "ライト",
     themeDark: "ダーク",
     themeSystem: "システム",
+    docsTitle: "正語日新標 v5.1",
+    docsButton: "規範標準",
+    close: "閉じる",
+    disclaimer: "本プロジェクトは架空の「南武民主共和国」世界観に基づいています。すべての組織名や設定は創作的なフィクションであり、現実とは無関係です。",
   }
 };

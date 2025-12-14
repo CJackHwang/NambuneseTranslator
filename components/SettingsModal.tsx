@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getSettings, saveSettings, DEFAULT_SETTINGS } from '../services/settingsService';
+import { clearExtractionCache } from '../services/geminiService';
 import { AISettings, AIProvider } from '../types';
 
 interface SettingsModalProps {
@@ -29,6 +30,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
    const handleSave = () => {
       saveSettings(settings);
+      clearExtractionCache(); // Clear cache when settings change
       onClose();
    };
 

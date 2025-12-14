@@ -11,8 +11,29 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['"Roboto"', '"Noto Sans TC"', '"Noto Sans JP"', 'sans-serif'],
-                jp: ['"Noto Sans JP"', 'sans-serif'],
+                sans: [
+                    'Inter',
+                    'ui-sans-serif',
+                    'system-ui',
+                    '-apple-system',
+                    'BlinkMacSystemFont',
+                    '"Segoe UI"',
+                    'Roboto',
+                    '"Helvetica Neue"',
+                    'Arial',
+                    '"Noto Sans"',
+                    '"PingFang SC"',
+                    '"Hiragino Sans GB"',
+                    '"Microsoft YaHei"',
+                    '"Noto Sans SC"',
+                    'sans-serif',
+                    '"Apple Color Emoji"',
+                    '"Segoe UI Emoji"',
+                    '"Segoe UI Symbol"',
+                    '"Noto Color Emoji"'
+                ],
+                serif: ['"Noto Serif SC"', '"Songti SC"', 'serif'],
+                mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace'],
             },
             colors: {
                 dl: {
