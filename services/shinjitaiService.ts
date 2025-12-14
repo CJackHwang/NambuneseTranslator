@@ -14,7 +14,17 @@
 
 const DICT_URL = '/data/loadDictionary.js';
 
-let dictionary: Record<string, string[]> | null = null;
+/** Character -> [PreferredVariant, ...OtherVariants] */
+type ShinjitaiDictionary = Record<string, string[]>;
+
+/** Mock window object for script execution */
+interface MockWindow {
+  dictionary?: ShinjitaiDictionary;
+  shiftjis1List?: string;
+  invalidCharacter?: string[];
+}
+
+let dictionary: ShinjitaiDictionary | null = null;
 let shiftjis1List: string | null = null;
 let loadPromise: Promise<void> | null = null;
 
@@ -36,7 +46,7 @@ export const initShinjitai = async (): Promise<void> => {
 
       // The script assigns to window.shiftjis1List and window.dictionary.
       // We simulate a window object to capture these assignments.
-      const mockWindow: any = {};
+      const mockWindow: MockWindow = {};
 
       // Execute the script content within a function scope passing mockWindow as 'window'
       const fn = new Function('window', script);

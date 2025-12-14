@@ -54,8 +54,6 @@ export const TRANSLATIONS = {
     themeLight: "Light",
     themeDark: "Dark",
     themeSystem: "Auto",
-    highPrecision: "High Precision Mode",
-    highPrecisionDesc: "Uses 3 concurrent AI requests (Nouns, Pronouns, Numerals) for higher accuracy. Slower and consumes more tokens.",
   },
   zh: {
     title: "南武正语翻译器",
@@ -110,8 +108,6 @@ export const TRANSLATIONS = {
     themeLight: "浅色",
     themeDark: "深色",
     themeSystem: "跟随系统",
-    highPrecision: "高精度提取模式",
-    highPrecisionDesc: "通过 3 个并发请求分别提取名词、代词和数词，提高准确率。速度较慢且消耗更多 Token。",
   },
   ja: {
     title: "南武正語翻訳機",
@@ -166,7 +162,5 @@ export const TRANSLATIONS = {
     themeLight: "ライト",
     themeDark: "ダーク",
     themeSystem: "システム",
-    highPrecision: "高精度抽出モード",
-    highPrecisionDesc: "名詞、代名詞、数字を3つの並列リクエストで個別に抽出します。精度は向上しますが、速度は低下し、トークン消費量が増加します。",
   }
 };

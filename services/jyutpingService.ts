@@ -96,27 +96,52 @@ export const isDictionaryLoaded = (): boolean => {
 };
 
 /**
+ * Get the dictionary cache directly (for sync access after init).
+ * Returns null if dictionary is not yet loaded.
+ */
+export const getDictCache = (): Map<string, string> | null => {
+  return dictCache;
+};
+
+/**
+ * Synchronous Jyutping lookup for a single character.
+ * Returns the Jyutping or the original character if not found.
+ * IMPORTANT: Call initDictionary() before using this function.
+ */
+export const getJyutpingSync = (char: string): string => {
+  if (!dictCache) return char;
+
+  // Skip ASCII characters
+  if (/^[\x00-\x7F]$/.test(char)) return char;
+
+  return dictCache.get(char) || char;
+};
+
+/**
+ * Batch Jyutping lookup for multiple characters.
+ * Much more efficient than calling getJyutping for each character.
+ * Returns an array of Jyutping strings corresponding to each input character.
+ */
+export const getJyutpingBatch = (chars: string[]): string[] => {
+  if (!dictCache) return chars;
+
+  return chars.map(char => {
+    // Skip ASCII characters
+    if (/^[\x00-\x7F]$/.test(char)) return char;
+    return dictCache!.get(char) || char;
+  });
+};
+
+/**
  * Convert text to Jyutping array using the loaded dictionary.
  * Returns original char if not found.
+ * @deprecated Use getJyutpingBatch() for better performance after calling initDictionary()
  */
 export const getJyutping = async (text: string): Promise<string[]> => {
   if (!dictCache) {
     await initDictionary();
   }
 
-  const result: string[] = [];
-  const chars = Array.from(text); // Array.from handles surrogate pairs correctly
-
-  for (const char of chars) {
-    // Skip non-Chinese/Punctuation lookup optimization (ASCII range)
-    // But keeping punctuation is handled by caller usually.
-    if (/[\u0000-\u007F]/.test(char)) {
-      result.push(char);
-      continue;
-    }
-
-    const jp = dictCache?.get(char);
-    result.push(jp || char);
-  }
-  return result;
+  const chars = Array.from(text);
+  return getJyutpingBatch(chars);
 };

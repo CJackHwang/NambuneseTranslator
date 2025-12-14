@@ -14,15 +14,14 @@ const POS_CATEGORIES = {
     VERB: ['VV', 'VA', 'VC', 'VE'],
     ADJ: ['JJ'],
     ADV: ['AD'],
-    // ... 其他不需要特殊处理
 } as const;
 
-// 需要保留为汉字的词性
-const PRESERVED_POS_TAGS: string[] = [
+/** POS tags that should be preserved as Kanji (nouns, pronouns, numerals) */
+const PRESERVED_POS_TAGS: readonly string[] = [
     ...POS_CATEGORIES.NOUN,
     ...POS_CATEGORIES.PRONOUN,
     ...POS_CATEGORIES.NUMERAL,
-];
+] as const;
 
 export interface HanLPPOSResult {
     tok: string[][];  // 分词结果

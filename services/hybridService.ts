@@ -2,7 +2,7 @@
 
 import { extractPreservedTerms } from './geminiService';
 import { toShinjitai, initShinjitai, normalizeJapanesePunctuation } from './shinjitaiService';
-import { getJyutping, initDictionary } from './jyutpingService';
+import { getJyutpingBatch, getJyutpingSync, initDictionary } from './jyutpingService';
 import { convertToKana } from './kanaConverter';
 import { TranslationResult } from '../types';
 
@@ -11,7 +11,7 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
   await Promise.all([initDictionary(), initShinjitai()]);
 
   // === PARALLEL PROCESSING ===
-  
+
   // Path A: Normalization
   // Convert original Input -> Shinjitai
   let normalizedText = toShinjitai(inputText);
@@ -47,7 +47,7 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
   normalizedKeywords.sort((a, b) => b.length - a.length);
 
   // === SEGMENTATION & CONVERSION ===
-  
+
   const segments: { text: string, type: 'KANJI' | 'KANA', reading?: string, source?: string }[] = [];
   let fullJyutping = "";
   let fullZhengyu = "";
@@ -75,31 +75,29 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
       // treat it as Text/Kanji segment WITHOUT reading to prevent Kana conversion.
       // This overrides AI tagging mistakes where English is tagged as a noun.
       if (/^[\x00-\x7F]+$/.test(match)) {
-         segments.push({ text: match, type: 'KANJI' }); // No reading
-         fullZhengyu += match;
-         fullJyutping += match + " ";
-         fullKanaStr += match;
-         i += match.length;
-         continue;
+        segments.push({ text: match, type: 'KANJI' }); // No reading
+        fullZhengyu += match;
+        fullJyutping += match + " ";
+        fullKanaStr += match;
+        i += match.length;
+        continue;
       }
 
       // === KANJI SEGMENT (Matched Anchor) ===
-      
-      // Get Jyutping for reference (of the normalized term)
-      const jpArray = await getJyutping(match);
+
+      // Get Jyutping for reference (of the normalized term) - using sync batch lookup
+      const matchChars = Array.from(match);
+      const jpArray = getJyutpingBatch(matchChars);
       const jpString = jpArray.join(' ');
       fullJyutping += jpString + " ";
 
       // Generate Reading for Ruby
-      let reading = "";
-      for(const p of jpArray) {
-        reading += convertToKana(p);
-      }
+      const reading = jpArray.map(p => convertToKana(p)).join('');
 
-      segments.push({ 
-        text: match, 
-        type: 'KANJI', 
-        reading: reading 
+      segments.push({
+        text: match,
+        type: 'KANJI',
+        reading: reading
       });
       fullZhengyu += match;
       fullKanaStr += reading;
@@ -108,15 +106,15 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
     } else {
       // No keyword match
       const char = normalizedText[i];
-      
+
       // B. Check for Latin/ASCII/Numbers (English Protection)
       if (/[a-zA-Z0-9]/.test(char)) {
-         segments.push({ text: char, type: 'KANJI' }); // No reading
-         fullZhengyu += char;
-         fullJyutping += char; 
-         fullKanaStr += char;
-         i++;
-         continue;
+        segments.push({ text: char, type: 'KANJI' }); // No reading
+        fullZhengyu += char;
+        fullJyutping += char;
+        fullKanaStr += char;
+        i++;
+        continue;
       }
 
       // C. Punctuation
@@ -129,17 +127,16 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
         continue;
       }
 
-      // D. Fallback: Convert to Kana (Verbs, Adjectives, etc.)
-      const jpArray = await getJyutping(char);
-      const jp = jpArray[0];
-      
+      // D. Fallback: Convert to Kana (Verbs, Adjectives, etc.) - using sync lookup
+      const jp = getJyutpingSync(char);
+
       const kana = convertToKana(jp);
-      
+
       segments.push({ text: kana, type: 'KANA', source: jp });
       fullZhengyu += kana;
       fullJyutping += jp + " ";
       fullKanaStr += kana;
-      
+
       i++;
     }
   }
