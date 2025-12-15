@@ -224,7 +224,7 @@ const DocsModal: React.FC<DocsModalProps> = ({ isOpen, onClose }) => {
 
                 {/* Footer */}
                 <div className="px-4 sm:px-6 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 shrink-0 flex justify-between items-center">
-                    <span className="text-xs text-gray-400 dark:text-gray-500">v5.1 | CC BY-SA 4.0</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">v5.2 | CC BY-SA 4.0</span>
                     <button
                         onClick={onClose}
                         className="px-4 py-1.5 text-sm font-medium tracking-wide text-white bg-dl-accent hover:bg-teal-700 dark:hover:bg-teal-600 rounded-lg shadow-sm transition-all active:scale-95"

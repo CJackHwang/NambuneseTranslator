@@ -111,7 +111,7 @@ const OutputPanel: React.FC<OutputPanelProps> = ({
                   })}
                 </div>
               ) : (
-                <span>{result.zhengyu}</span>
+                <span>{result.nambunese}</span>
               )}
             </div>
           </div>
@@ -192,7 +192,7 @@ const OutputPanel: React.FC<OutputPanelProps> = ({
             )}
 
             <button
-              onClick={() => result && handleCopy(result.zhengyu, 'MAIN')}
+              onClick={() => result && handleCopy(result.nambunese, 'MAIN')}
               disabled={!result}
               className={`p-2 rounded-md transition-all flex items-center gap-1.5 ${!result ? 'text-gray-300 dark:text-gray-600' : 'text-dl-textSec dark:text-gray-400 hover:text-dl-primary dark:hover:text-white hover:bg-white dark:hover:bg-gray-700'}`}
               title={t('copy')}

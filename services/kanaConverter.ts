@@ -1,8 +1,8 @@
 
 
 /**
- * Zhengyu v5.1 Kana Converter Algorithm
- * Strict adherence to the v5.1 specification.
+ * Nambunese v5.2 Kana Converter Algorithm
+ * Strict adherence to the v5.2 specification.
  */
 
 // Regex for parsing Jyutping (Initial + Final + Tone)
@@ -62,7 +62,7 @@ const getKana = (initial: string, vowel: string): string => {
   return row[idx];
 };
 
-export const convertToKana = (jyutping: string): string => {
+export const convertToKana = (jyutping: string, isParticle: boolean = false): string => {
   // 1. Handle Punctuation/Raw text/Katakana (already converted by AI)
   // If input contains non-jyutping characters (like Katakana or symbols), return as is.
   if (!/^[a-z0-9]+$/i.test(jyutping)) return jyutping;
@@ -133,31 +133,16 @@ export const convertToKana = (jyutping: string): string => {
   // Standard Vowels
   switch (nucleus) {
     case 'aa':
-      // open: aa -> col a + 'あ'
-      // closed: aa(n) -> col a + 'ん'
-      // special: if initial is 'f', faa -> ふぁあ
-      result = getKana(initial, 'a');
-      if (coda === '') {
-        // Special rule: if no coda, long 'aa' gets suffix 'あ'.
-        // e.g. baa -> ばあ
-        result += 'あ';
-      } else {
-        // If coda exists, usually long 'aa' is just the 'a' col char + coda?
-        // Spec Table 1.1:
-        // baa(n) -> ばあん (ba + a + n).
-        // So we add 'あ' if explicit long vowel needed?
-        // Table: baa(n) -> ばあん.
-        // Table: ba(n) -> ばん.
-        // So YES, we need 'あ' suffix for 'aa' even with coda.
-        result += 'あ';
-      }
+      // v5.2: long aa is written with the long vowel mark 「ー」.
+      // Special rule: for particles (语气词/助词) use the simplified short form.
+      result = isParticle ? getKana(initial, 'a') : getKana(initial, 'a') + 'ー';
       break;
 
     case 'aai':
-      result = getKana(initial, 'a') + 'あい';
+      result = getKana(initial, 'a') + 'ーい';
       break;
     case 'aau':
-      result = getKana(initial, 'a') + 'あう';
+      result = getKana(initial, 'a') + 'ーう';
       break;
 
     case 'a':

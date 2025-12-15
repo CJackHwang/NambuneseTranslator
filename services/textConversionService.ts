@@ -21,7 +21,7 @@ export const convertTextMode = async (inputText: string): Promise<TranslationRes
     original: inputText,
     cantonese: inputText,
     jyutping: "", // No phonetic transcription for this mode
-    zhengyu: converted,
+    nambunese: converted,
     fullKana: "", // Not applicable
     explanation: "Text Conversion Mode: Chinese Hanzi to Japanese Shinjitai + Punctuation mapping (，→、).",
     engine: 'RULE',

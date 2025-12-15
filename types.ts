@@ -4,7 +4,7 @@ export interface TranslationResult {
   original: string;
   cantonese: string; // The AI generated intermediate step (keyword list or raw text)
   jyutping: string;
-  zhengyu: string;
+  nambunese: string;
   fullKana?: string; // The full phonetic representation (Pure Kana)
   explanation?: string;
   engine?: 'RULE' | 'AI' | 'HYBRID';

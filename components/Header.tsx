@@ -23,7 +23,7 @@ const Header: React.FC = () => {
                 {t('title')}
               </h1>
               <span className="hidden sm:inline-flex text-[10px] font-bold px-1.5 py-0.5 rounded bg-dl-bg dark:bg-dl-dark-bg text-dl-textSec dark:text-dl-dark-textSec whitespace-nowrap">
-                v5.1
+                v5.2
               </span>
             </div>
             <div className="hidden md:block text-[10px] font-medium text-dl-textSec dark:text-dl-dark-textSec/80 tracking-widest uppercase truncate">

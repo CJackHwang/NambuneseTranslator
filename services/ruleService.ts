@@ -9,15 +9,15 @@ import { toShinjitai, initShinjitai, normalizeJapanesePunctuation } from './shin
  * Strategy:
  * 1. Convert Mandarin/Text Input -> Shinjitai
  * 2. Convert to Jyutping (via LSHK Dictionary)
- * 3. Convert strictly to Kana (Zhengyu Phonetic Script)
+ * 3. Convert strictly to Kana (Nambunese Phonetic Script)
  * 
- * V5.1 Update:
- * This mode now serves as both Transliteration and Text Conversion.
- * 'zhengyu' field returns the Shinjitai Text (for Main Copy).
+ * v5.2 Update:
+ * This mode serves as both Transliteration and Text Conversion.
+ * 'nambunese' field returns the Shinjitai Text (for Main Copy).
  * 'fullKana' field returns the Pure Kana (for Kana Copy/TTS).
  * 'segments' provides the Ruby structure.
  * 
- * V5.2 Performance Update:
+ * v5.2 Performance Update:
  * Uses batch Jyutping lookup for significantly improved performance.
  */
 
@@ -33,7 +33,7 @@ export const convertRuleBased = async (inputText: string): Promise<TranslationRe
   // 2. Batch lookup all Jyutping at once (major performance improvement)
   const jyutpingResults = getJyutpingBatch(chars);
 
-  let zhengyuStr = ""; // Holds the Shinjitai Text (Main Copy)
+  let nambuneseStr = ""; // Holds the Shinjitai Text (Main Copy)
   let jyutpingStr = "";
   let fullKanaStr = "";
 
@@ -46,7 +46,7 @@ export const convertRuleBased = async (inputText: string): Promise<TranslationRe
 
     // Check if punctuation/space
     if (/[\s\p{P}]/u.test(char)) {
-      zhengyuStr += char;
+      nambuneseStr += char;
       jyutpingStr += char + " ";
       fullKanaStr += char;
       segments.push({ text: char, type: 'KANA' });
@@ -55,7 +55,7 @@ export const convertRuleBased = async (inputText: string): Promise<TranslationRe
 
     // Check ASCII/English
     if (/^[\x00-\x7F]$/.test(char)) {
-      zhengyuStr += char;
+      nambuneseStr += char;
       jyutpingStr += char + " ";
       fullKanaStr += char;
       segments.push({ text: char, type: 'KANJI' }); // No reading -> Render text
@@ -64,14 +64,14 @@ export const convertRuleBased = async (inputText: string): Promise<TranslationRe
 
     if (jp === char) {
       // Not found in dictionary -> Keep original
-      zhengyuStr += char;
+      nambuneseStr += char;
       jyutpingStr += char + " ";
       fullKanaStr += char;
       segments.push({ text: char, type: 'KANJI' });
     } else {
       // Found -> Convert to Kana
       const kana = convertToKana(jp);
-      zhengyuStr += char; // Keep as Text for Main Copy
+      nambuneseStr += char; // Keep as Text for Main Copy
       jyutpingStr += jp + " ";
       fullKanaStr += kana; // Keep as Kana for Kana Copy
 
@@ -88,7 +88,7 @@ export const convertRuleBased = async (inputText: string): Promise<TranslationRe
     original: inputText,
     cantonese: inputText, // No intermediate translation in Pure Mode
     jyutping: jyutpingStr.trim(),
-    zhengyu: zhengyuStr, // Main Result is now Text (Shinjitai)
+    nambunese: nambuneseStr, // Main Result is now Text (Shinjitai)
     fullKana: fullKanaStr, // Pure Kana
     explanation: "Transliteration Mode: Character-to-Kana conversion with Ruby display.",
     engine: 'RULE',

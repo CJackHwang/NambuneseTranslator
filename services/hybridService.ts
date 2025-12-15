@@ -1,6 +1,7 @@
 
 
 import { extractPreservedTerms } from './geminiService';
+import { getSettings } from './settingsService';
 import { toShinjitai, initShinjitai, normalizeJapanesePunctuation } from './shinjitaiService';
 import { getJyutpingBatch, getJyutpingSync, initDictionary } from './jyutpingService';
 import { convertToKana } from './kanaConverter';
@@ -18,39 +19,47 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
   // Apply Punctuation Rules (Global Japanese Style)
   normalizedText = normalizeJapanesePunctuation(normalizedText);
 
-  // Path B: AI Extraction (On Original Text)
-  // We send the ORIGINAL text to AI to ensure it sees the context correctly.
-  let rawKeywords: string[] = [];
+  // Path B: AI/HanLP Analysis (On Original Text)
+  // We send the ORIGINAL text to AI/HanLP to ensure it sees the context correctly.
+  let preservedTerms: string[] = [];
+  let particles = new Set<string>();
   let aiErrorMsg: string | undefined = undefined;
 
   try {
-    rawKeywords = await extractPreservedTerms(inputText);
+    const settings = getSettings();
+
+    if (settings.provider === 'HANLP') {
+      const { analyzeTextWithHanLP } = await import('./hanlpService');
+      const analysis = await analyzeTextWithHanLP(inputText);
+      preservedTerms = analysis.preservedTerms;
+      particles = analysis.particles;
+    } else {
+      preservedTerms = await extractPreservedTerms(inputText);
+    }
   } catch (error: any) {
-    console.error("AI Extraction failed", error);
+    console.error("AI/HanLP Analysis failed", error);
     // Capture the error message to display in UI
     aiErrorMsg = error.message || "Unknown AI Service Error";
-    rawKeywords = [];
+    preservedTerms = [];
+    particles = new Set();
   }
 
   // === UNIFICATION ===
-  // Convert the AI-extracted keywords to Shinjitai as well.
-  // This ensures that if Input "功能" -> Shinjitai "功能"
-  // And AI extracts "功能" -> Shinjitai "功能"
-  // They match.
-  // Even if Input "逻辑" -> Shinjitai "論理" (hypothetically, if dictionary does that)
-  // AI extracts "逻辑" -> Shinjitai "論理"
-  // They match.
-  // We also apply punctuation normalization to keywords just in case AI returned punctuation
-  const normalizedKeywords = rawKeywords.map(k => normalizeJapanesePunctuation(toShinjitai(k)));
+  // Convert the extracted preserved terms to Shinjitai as well.
+  const normalizedKeywords = preservedTerms.map(k => normalizeJapanesePunctuation(toShinjitai(k)));
 
   // Sort keywords by length (descending) to ensure greedy matching
   normalizedKeywords.sort((a, b) => b.length - a.length);
+
+  // Normalize particles for matching on normalizedText
+  const normalizedParticleTerms = Array.from(particles).map(p => normalizeJapanesePunctuation(toShinjitai(p)));
+  normalizedParticleTerms.sort((a, b) => b.length - a.length);
 
   // === SEGMENTATION & CONVERSION ===
 
   const segments: { text: string, type: 'KANJI' | 'KANA', reading?: string, source?: string }[] = [];
   let fullJyutping = "";
-  let fullZhengyu = "";
+  let fullNambunese = "";
   let fullKanaStr = "";
 
   let i = 0;
@@ -76,7 +85,7 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
       // This overrides AI tagging mistakes where English is tagged as a noun.
       if (/^[\x00-\x7F]+$/.test(match)) {
         segments.push({ text: match, type: 'KANJI' }); // No reading
-        fullZhengyu += match;
+        fullNambunese += match;
         fullJyutping += match + " ";
         fullKanaStr += match;
         i += match.length;
@@ -99,18 +108,43 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
         type: 'KANJI',
         reading: reading
       });
-      fullZhengyu += match;
+      fullNambunese += match;
       fullKanaStr += reading;
 
       i += match.length;
     } else {
       // No keyword match
+
+      // B. Check for Particle Match (HanLP only)
+      let particleMatch: string | null = null;
+      for (const particle of normalizedParticleTerms) {
+        if (normalizedText.startsWith(particle, i)) {
+          particleMatch = particle;
+          break;
+        }
+      }
+
+      if (particleMatch) {
+        const particleChars = Array.from(particleMatch);
+        const jpArray = getJyutpingBatch(particleChars);
+        const jpString = jpArray.join(' ');
+        const kana = jpArray.map(p => convertToKana(p, true)).join('');
+
+        segments.push({ text: kana, type: 'KANA', source: jpString });
+        fullNambunese += kana;
+        fullJyutping += jpString + " ";
+        fullKanaStr += kana;
+
+        i += particleMatch.length;
+        continue;
+      }
+
       const char = normalizedText[i];
 
-      // B. Check for Latin/ASCII/Numbers (English Protection)
+      // C. Check for Latin/ASCII/Numbers (English Protection)
       if (/[a-zA-Z0-9]/.test(char)) {
         segments.push({ text: char, type: 'KANJI' }); // No reading
-        fullZhengyu += char;
+        fullNambunese += char;
         fullJyutping += char;
         fullKanaStr += char;
         i++;
@@ -120,7 +154,7 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
       // C. Punctuation
       if (/[\s\p{P}]/u.test(char)) {
         segments.push({ text: char, type: 'KANA' });
-        fullZhengyu += char;
+        fullNambunese += char;
         fullJyutping += char + " ";
         fullKanaStr += char;
         i++;
@@ -133,7 +167,7 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
       const kana = convertToKana(jp);
 
       segments.push({ text: kana, type: 'KANA', source: jp });
-      fullZhengyu += kana;
+      fullNambunese += kana;
       fullJyutping += jp + " ";
       fullKanaStr += kana;
 
@@ -143,20 +177,22 @@ export const convertHybrid = async (inputText: string): Promise<TranslationResul
 
   return {
     original: inputText,
-    cantonese: JSON.stringify(rawKeywords),
+    cantonese: JSON.stringify(preservedTerms),
     jyutping: fullJyutping.trim(),
-    zhengyu: fullZhengyu,
+    nambunese: fullNambunese,
     fullKana: fullKanaStr,
-    explanation: "Hybrid Pipeline v5.1 (Raw AI Extraction + Unified Shinjitai Matching)",
+    explanation: "Hybrid Pipeline v5.2 (AI/HanLP Analysis + Unified Shinjitai Matching)",
     engine: 'HYBRID',
     aiError: aiErrorMsg,
     segments: segments,
     processLog: {
       step1_raw_input: inputText,
-      step2_ai_extraction: aiErrorMsg ? `ERROR: ${aiErrorMsg}` : JSON.stringify(rawKeywords),
+      step2_ai_extraction: aiErrorMsg
+        ? `ERROR: ${aiErrorMsg}`
+        : JSON.stringify({ preservedTerms, particles: Array.from(particles) }),
       step3_normalization_text: normalizedText,
       step4_normalization_keywords: JSON.stringify(normalizedKeywords),
-      step5_segmentation: fullZhengyu,
+      step5_segmentation: fullNambunese,
       step6_jyutping_generation: fullJyutping.trim(),
       step7_full_kana_generation: fullKanaStr
     }
