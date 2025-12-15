@@ -1,6 +1,6 @@
 import { AISettings } from '../types';
 
-const SETTINGS_KEY = 'zhengyu_ai_settings_v1';
+const SETTINGS_KEY = 'nambunese_ai_settings_v1';
 
 export const DEFAULT_SETTINGS: AISettings = {
   provider: 'HANLP',

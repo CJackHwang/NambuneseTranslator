@@ -169,10 +169,10 @@ export const extractPreservedTerms = async (inputText: string): Promise<string[]
 
   // HanLP Provider - 使用专门的词性标注服务（推荐，默认）
   if (settings.provider === 'HANLP') {
-    const { extractTermsWithHanLP } = await import('./hanlpService');
-    const result = await extractTermsWithHanLP(inputText);
-    setCacheResult(cacheKey, result);
-    return result;
+    const { analyzeTextWithHanLP } = await import('./hanlpService');
+    const analysis = await analyzeTextWithHanLP(inputText);
+    setCacheResult(cacheKey, analysis.preservedTerms);
+    return analysis.preservedTerms;
   }
 
   // AI Providers - 使用单次调用完成提取

@@ -1,6 +1,6 @@
-# 正语日新标 v5.1 转换器 | Nambunese Converter
+# 正语日新标 v5.2 转换器 | Nambunese Converter
 
-将中文转换为南武正语（虚构世界观粤语假名书写系统），支持 v5.1 标准。
+将中文转换为南武正语（虚构世界观粤语假名书写系统），支持 v5.2 标准。
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/CJackHwang/NambuneseTranslator)
 

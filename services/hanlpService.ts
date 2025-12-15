@@ -10,6 +10,9 @@ const POS_CATEGORIES = {
     PRONOUN: ['PN'],               // 代词
     NUMERAL: ['CD', 'OD', 'M'],    // 基数词、序数词、量词
 
+    // 语气词/助词（需要特殊简化处理）
+    PARTICLE: ['SP', 'AS', 'MSP'],
+
     // 其他类（转换为假名）
     VERB: ['VV', 'VA', 'VC', 'VE'],
     ADJ: ['JJ'],
@@ -23,9 +26,17 @@ const PRESERVED_POS_TAGS: readonly string[] = [
     ...POS_CATEGORIES.NUMERAL,
 ] as const;
 
+/** POS tags that should be treated as particles (special simplification) */
+const PARTICLE_POS_TAGS: readonly string[] = [...POS_CATEGORIES.PARTICLE] as const;
+
 export interface HanLPPOSResult {
     tok: string[][];  // 分词结果
     pos: string[][];  // 词性标注
+}
+
+export interface TextAnalysisResult {
+    preservedTerms: string[]; // 名词等（保留汉字）
+    particles: Set<string>;   // 语气词（需简化处理）
 }
 
 /**
@@ -125,19 +136,45 @@ export function extractPreservedTermsFromPOS(result: HanLPPOSResult): string[] {
 }
 
 /**
- * 主函数：调用 HanLP 并提取关键词
- * 可直接替代 geminiService 的 extractPreservedTerms
+ * 从 HanLP 词性标注结果中提取语气词/助词（用于 v5.2 语气词简化）
  */
-export async function extractTermsWithHanLP(text: string): Promise<string[]> {
+export function extractParticlesFromPOS(result: HanLPPOSResult): Set<string> {
+    const particles = new Set<string>();
+
+    for (let sentIdx = 0; sentIdx < result.tok.length; sentIdx++) {
+        const tokens = result.tok[sentIdx];
+        const tags = result.pos[sentIdx];
+
+        for (let i = 0; i < tokens.length; i++) {
+            const token = tokens[i];
+            const tag = tags[i];
+
+            if (PARTICLE_POS_TAGS.includes(tag)) {
+                particles.add(token);
+            }
+        }
+    }
+
+    return particles;
+}
+
+/**
+ * 主函数：调用 HanLP 并返回分析结果
+ */
+export async function analyzeTextWithHanLP(text: string): Promise<TextAnalysisResult> {
     if (!text || !text.trim()) {
-        return [];
+        return { preservedTerms: [], particles: new Set() };
     }
 
     try {
         const posResult = await callHanLPPOS(text);
-        return extractPreservedTermsFromPOS(posResult);
+
+        return {
+            preservedTerms: extractPreservedTermsFromPOS(posResult),
+            particles: extractParticlesFromPOS(posResult),
+        };
     } catch (error) {
-        console.error('HanLP extraction error:', error);
+        console.error('HanLP analysis error:', error);
         throw error;
     }
 }
