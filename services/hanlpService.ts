@@ -130,31 +130,18 @@ interface HanLPRequestOptions {
     coarse?: boolean;
 }
 
-// CTB 词性标签到类别的映射
-const POS_CATEGORIES = {
-    // 名词类（需要保留）
-    NOUN: ['NN', 'NR', 'NT'],      // 普通名词、专有名词、时间名词
-    PRONOUN: ['PN'],               // 代词
-    NUMERAL: ['CD', 'OD', 'M'],    // 基数词、序数词、量词
+// === 词性白名单（防火墙放行策略） ===
+// 只匹配需要保留的词性和语气词，其他一律转假名
 
-    // 语气词/助词（需要特殊简化处理）
-    PARTICLE: ['SP', 'AS', 'MSP'],
-
-    // 其他类（转换为假名）
-    VERB: ['VV', 'VA', 'VC', 'VE'],
-    ADJ: ['JJ'],
-    ADV: ['AD'],
-} as const;
-
-/** POS tags that should be preserved as Kanji (nouns, pronouns, numerals) */
+/** 需要保留为汉字的词性（名词、代词、数词/量词） */
 const PRESERVED_POS_TAGS: readonly string[] = [
-    ...POS_CATEGORIES.NOUN,
-    ...POS_CATEGORIES.PRONOUN,
-    ...POS_CATEGORIES.NUMERAL,
-] as const;
+    'NN', 'NR', 'NT',  // 普通名词、专有名词、时间名词
+    'PN',              // 代词
+    'CD', 'OD', 'M',   // 基数词、序数词、量词
+];
 
-/** POS tags that should be treated as particles (special simplification) */
-const PARTICLE_POS_TAGS: readonly string[] = [...POS_CATEGORIES.PARTICLE] as const;
+/** 需要特殊处理的语气词（句末语气词） */
+const PARTICLE_POS_TAGS: readonly string[] = ['SP'];
 
 export interface TextAnalysisResult {
     preservedTerms: string[]; // 名词等（保留汉字）
