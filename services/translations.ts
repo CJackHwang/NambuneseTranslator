@@ -59,6 +59,13 @@ export const TRANSLATIONS = {
     docsButton: "Specification",
     close: "Close",
     disclaimer: "This project is set in the fictional world of the \"Nambu Democratic Republic\". All organization names and settings are creative fiction and have no connection to reality.",
+    // History
+    history: "History",
+    clearHistory: "Clear",
+    noHistory: "No translation history",
+    deleteEntry: "Delete",
+    restoreEntry: "Restore",
+    historyTooltip: "Click to restore this translation",
   },
   zh: {
     title: "南武正语翻译器",
@@ -118,6 +125,13 @@ export const TRANSLATIONS = {
     docsButton: "规范标准",
     close: "隐藏",
     disclaimer: "本项目基于虚构的「南武民主共和国」世界观，所有机构名称、设定均为创作虎构，与现实世界无关。",
+    // History
+    history: "历史记录",
+    clearHistory: "清空",
+    noHistory: "暂无翻译历史",
+    deleteEntry: "删除",
+    restoreEntry: "恢复",
+    historyTooltip: "点击恢复此翻译",
   },
   ja: {
     title: "南武正語翻訳機",
@@ -177,5 +191,12 @@ export const TRANSLATIONS = {
     docsButton: "規範標準",
     close: "閉じる",
     disclaimer: "本プロジェクトは架空の「南武民主共和国」世界観に基づいています。すべての組織名や設定は創作的なフィクションであり、現実とは無関係です。",
+    // History
+    history: "履歴",
+    clearHistory: "クリア",
+    noHistory: "翻訳履歴がありません",
+    deleteEntry: "削除",
+    restoreEntry: "復元",
+    historyTooltip: "クリックでこの翻訳を復元",
   }
 };

@@ -5,7 +5,9 @@ import { useConverter } from '../hooks/useConverter';
 import InputPanel from './InputPanel';
 import OutputPanel from './OutputPanel';
 import ProcessDetails from './ProcessDetails';
+import HistoryPanel from './HistoryPanel';
 import { ConversionStatus } from '../types';
+import { HistoryEntry } from '../services/historyService';
 
 const Converter: React.FC = () => {
   const { t } = useLanguage();
@@ -27,6 +29,14 @@ const Converter: React.FC = () => {
     setResult(null);
   };
 
+  // Restore from history: set input, mode, and trigger translation with correct mode
+  const handleRestoreHistory = (entry: HistoryEntry) => {
+    setInput(entry.input);
+    setMode(entry.mode);
+    // Trigger translation with explicit mode to avoid async state issues
+    convert(entry.input, entry.mode);
+  };
+
   return (
     <main className="w-full max-w-7xl mx-auto px-4 py-8">
       {/* Resource Loading Errors */}
@@ -39,6 +49,11 @@ const Converter: React.FC = () => {
 
       {/* Main Interface */}
       <div className="bg-white dark:bg-dl-dark-surface rounded-xl shadow-card border border-dl-border dark:border-dl-dark-border flex flex-col md:flex-row min-h-[500px] md:h-[600px] overflow-hidden relative transition-colors">
+        {/* History Button - positioned at top right */}
+        <div className="absolute top-3 right-3 z-30">
+          <HistoryPanel onRestore={handleRestoreHistory} />
+        </div>
+
         <div className="w-full md:w-1/2 h-full flex flex-col">
           <InputPanel
             input={input}
