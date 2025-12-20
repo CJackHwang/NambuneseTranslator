@@ -1,6 +1,16 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
-import { HANLP_PUBLIC_KEY_PEM, HANLP_API_URL } from '../services/hanlpCore';
+
+// HanLP RSA 公钥 (内联定义，因为 Vercel Serverless 无法访问 services 目录)
+const PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----
+MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDHLWIFQOZ/uh379CWuF96q1Eif
+KNx5Tpu/M9dDsOPYmKwraqc/MOl++cJP0u99qugqhMYm535xcnWl/Z14ZNGvVhEB
+sHEdcWT/CvBbSeKIA24eyrrqoKafNVZ0aOE95UqM5Q7630cBnhdo+LOxBlhaMy+8
+LaK1tFV4AFNMR6fISwIDAQAB
+-----END PUBLIC KEY-----`;
+
+// HanLP API 端点
+const HANLP_API_URL = 'https://hanlp.hankcs.com/backend/v2/pos';
 
 /**
  * 生成 HanLP API 认证头
@@ -11,7 +21,7 @@ function generateEHeader(): string {
   const buffer = Buffer.from(timestamp, 'utf8');
   const encrypted = crypto.publicEncrypt(
     {
-      key: HANLP_PUBLIC_KEY_PEM,
+      key: PUBLIC_KEY_PEM,
       padding: crypto.constants.RSA_PKCS1_PADDING,
     },
     buffer
