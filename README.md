@@ -42,6 +42,16 @@ npm run build
 | **OpenAI** | 支持任意 OpenAI 兼容 API | 需要 API 密钥 |
 | **Gemini** | Google AI 服务 | 需要 Gemini API 密钥 |
 
+## 📖 正语规范
+
+完整的《正语日新标 v5.2》规范文档位于 `public/data/specification.md`，包含：
+
+- **核心原则** - 语义分工、音韵简化、视觉连贯
+- **音韵系统** - 完整的粤拼→假名音节对照表
+- **转写规则** - 声母对应、韵母处理、特殊规则
+- **书写规范** - 汉字标准、标点符号、假名使用
+- **综合示例** - 实际对话和句子转换示例
+
 ## 📁 项目结构
 
 ```
@@ -58,14 +68,19 @@ NambuneseTranslator/
 │   └── ProcessDetails.tsx  # 转换过程详情
 ├── services/               # 核心服务
 │   ├── hanlpService.ts     # HanLP 词性标注
+│   ├── hanlpCore.ts        # HanLP 核心逻辑
 │   ├── geminiService.ts    # Gemini AI 服务
 │   ├── hybridService.ts    # 混合词性标注策略
+│   ├── ruleService.ts      # 纯规则转换
 │   ├── jyutpingService.ts  # 粤拼字典查询
-│   ├── kanaConverter.ts    # 粤拼→假名转换
+│   ├── kanaConverter.ts    # 粤拼→假名转换核心
 │   ├── shinjitaiService.ts # 新字体转换
 │   ├── ttsService.ts       # 语音合成
 │   ├── translations.ts     # 多语言翻译
 │   └── settingsService.ts  # 设置持久化
+├── public/data/            # 数据文件
+│   ├── specification.md    # 正语规范文档
+│   └── jyutping-table.tsv  # LSHK 粤拼字典
 ├── contexts/               # React Context
 ├── hooks/                  # 自定义 Hooks
 └── types.ts                # TypeScript 类型定义
@@ -77,6 +92,7 @@ NambuneseTranslator/
 - **样式**: TailwindCSS
 - **部署**: Vercel (Hosting + Serverless Functions)
 - **NLP**: HanLP API (通过 Serverless 代理)
+- **粤拼数据**: LSHK Jyutping Table
 
 ## 📝 License
 
