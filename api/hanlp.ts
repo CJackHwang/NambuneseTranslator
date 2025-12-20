@@ -1,22 +1,17 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
+import { HANLP_PUBLIC_KEY_PEM, HANLP_API_URL } from '../services/hanlpCore';
 
-// HanLP RSA 公钥
-const PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----
-MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDHLWIFQOZ/uh379CWuF96q1Eif
-KNx5Tpu/M9dDsOPYmKwraqc/MOl++cJP0u99qugqhMYm535xcnWl/Z14ZNGvVhEB
-sHEdcWT/CvBbSeKIA24eyrrqoKafNVZ0aOE95UqM5Q7630cBnhdo+LOxBlhaMy+8
-LaK1tFV4AFNMR6fISwIDAQAB
------END PUBLIC KEY-----`;
-
-// 简易的 RSA 加密逻辑 (Node.js crypto)
-// 保持原有的签名生成逻辑不变
-function generateHeader(): string {
+/**
+ * 生成 HanLP API 认证头
+ * 使用 RSA 加密当前时间戳
+ */
+function generateEHeader(): string {
   const timestamp = Math.floor(Date.now() / 1000).toString();
   const buffer = Buffer.from(timestamp, 'utf8');
   const encrypted = crypto.publicEncrypt(
     {
-      key: PUBLIC_KEY_PEM,
+      key: HANLP_PUBLIC_KEY_PEM,
       padding: crypto.constants.RSA_PKCS1_PADDING,
     },
     buffer
@@ -49,11 +44,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     // 4. 发起请求 (去除 X-Forwarded-For，保留核心伪装)
-    const response = await fetch('https://hanlp.hankcs.com/backend/v2/pos', {
+    const response = await fetch(HANLP_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-        'e': generateHeader(), // 动态签名
+        'e': generateEHeader(), // 动态签名
         'Accept': '*/*',
         // 必须的伪装头
         'Origin': 'https://hanlp.hankcs.com',

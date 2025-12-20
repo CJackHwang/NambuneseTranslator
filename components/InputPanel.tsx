@@ -36,7 +36,8 @@ const InputPanel: React.FC<InputPanelProps> = ({
   };
 
   const isLoading = status === ConversionStatus.LOADING;
-  const canConvert = input.trim() && resourcesReady && !isLoading;
+  const isOverLimit = input.length > 3500;
+  const canConvert = input.trim() && resourcesReady && !isLoading && !isOverLimit;
   const showManualButton = !isRealTime || mode === 'HYBRID';
 
   return (
@@ -57,7 +58,7 @@ const InputPanel: React.FC<InputPanelProps> = ({
               className="p-1.5 text-dl-textSec dark:text-dl-dark-textSec hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
               title="Clear"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
             </button>
           )}
         </div>
@@ -78,8 +79,9 @@ const InputPanel: React.FC<InputPanelProps> = ({
 
       {/* Footer */}
       <div className="h-14 border-t border-dl-border dark:border-dl-dark-border flex items-center justify-between px-4 bg-gray-50/30 dark:bg-gray-800/30 shrink-0 transition-colors">
-        <div className="text-xs text-gray-400 dark:text-gray-500 font-medium">
-          {input.length} {t('chars')}
+        <div className={`text-xs font-medium ${input.length > 3500 ? 'text-red-500' : 'text-gray-400 dark:text-gray-500'}`}>
+          {input.length} / 3500 {t('chars')}
+          {input.length > 3500 && <span className="ml-1">({t('charLimitExceeded')})</span>}
         </div>
         <div className="hidden md:block">
           {showManualButton && (
