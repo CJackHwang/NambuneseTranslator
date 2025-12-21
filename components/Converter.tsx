@@ -49,11 +49,6 @@ const Converter: React.FC = () => {
 
       {/* Main Interface */}
       <div className="bg-white dark:bg-dl-dark-surface rounded-xl shadow-card border border-dl-border dark:border-dl-dark-border flex flex-col md:flex-row min-h-[500px] md:h-[600px] overflow-hidden relative transition-colors">
-        {/* History Button - positioned at top right */}
-        <div className="absolute top-3 right-3 z-30">
-          <HistoryPanel onRestore={handleRestoreHistory} />
-        </div>
-
         <div className="w-full md:w-1/2 h-full flex flex-col">
           <InputPanel
             input={input}
@@ -65,6 +60,7 @@ const Converter: React.FC = () => {
             resourcesError={dictError}
             mode={mode}
             isRealTime={isRealTime}
+            historyPanel={<HistoryPanel onRestore={handleRestoreHistory} />}
           />
         </div>
 

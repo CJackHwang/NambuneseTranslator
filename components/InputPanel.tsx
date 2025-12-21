@@ -12,6 +12,7 @@ interface InputPanelProps {
   resourcesError: string | null;
   mode: string;
   isRealTime: boolean;
+  historyPanel?: React.ReactNode;
 }
 
 const InputPanel: React.FC<InputPanelProps> = ({
@@ -23,7 +24,8 @@ const InputPanel: React.FC<InputPanelProps> = ({
   resourcesReady,
   resourcesError,
   mode,
-  isRealTime
+  isRealTime,
+  historyPanel
 }) => {
   const { t } = useLanguage();
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
@@ -79,10 +81,16 @@ const InputPanel: React.FC<InputPanelProps> = ({
 
       {/* Footer */}
       <div className="h-14 border-t border-dl-border dark:border-dl-dark-border flex items-center justify-between px-4 bg-gray-50/30 dark:bg-gray-800/30 shrink-0 transition-colors">
-        <div className={`text-xs font-medium ${input.length > 3500 ? 'text-red-500' : 'text-gray-400 dark:text-gray-500'}`}>
+        {/* Left: Character count */}
+        <span className={`text-xs font-medium ${input.length > 3500 ? 'text-red-500' : 'text-gray-400 dark:text-gray-500'}`}>
           {input.length} / 3500 {t('chars')}
           {input.length > 3500 && <span className="ml-1">({t('charLimitExceeded')})</span>}
-        </div>
+        </span>
+
+        {/* Center: History button */}
+        {historyPanel}
+
+        {/* Right: Convert button (desktop only) */}
         <div className="hidden md:block">
           {showManualButton && (
             <button
