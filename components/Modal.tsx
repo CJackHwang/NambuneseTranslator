@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface ModalProps {
     isOpen: boolean;
@@ -7,68 +7,86 @@ interface ModalProps {
     titleIcon?: React.ReactNode;
     titleExtra?: React.ReactNode;
     footer?: React.ReactNode;
-    maxWidth?: 'sm' | 'md' | 'lg' | 'xl';
+    maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full';
     children: React.ReactNode;
 }
-
-const maxWidthClasses = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-4xl'
-};
 
 /**
  * Reusable Full-screen Modal Component
  * Provides consistent styling for all modal dialogs
  */
-const Modal: React.FC<ModalProps> = ({
-    isOpen,
-    onClose,
-    title,
-    titleIcon,
-    titleExtra,
-    footer,
-    maxWidth = 'lg',
-    children
-}) => {
-    if (!isOpen) return null;
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer, maxWidth = 'md', titleIcon, titleExtra }) => {
+    const [isClosing, setIsClosing] = useState(false);
+    const [show, setShow] = useState(isOpen);
+
+    useEffect(() => {
+        if (isOpen) {
+            setShow(true);
+            setIsClosing(false);
+        } else {
+            setIsClosing(true);
+            const timer = setTimeout(() => setShow(false), 200);
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen]);
+
+    if (!show) return null;
+
+    const maxWidthClasses = {
+        sm: 'max-w-sm',
+        md: 'max-w-md',
+        lg: 'max-w-lg',
+        xl: 'max-w-xl',
+        '2xl': 'max-w-2xl',
+        '3xl': 'max-w-3xl',
+        'full': 'max-w-full mx-4'
+    };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 transition-opacity">
-            <div className={`bg-white dark:bg-dl-dark-surface rounded-xl shadow-2xl w-full ${maxWidthClasses[maxWidth]} overflow-hidden flex flex-col max-h-[95dvh] sm:max-h-[90dvh] border border-gray-100 dark:border-gray-700 animate-fade-in`}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            {/* Darken the "room" (screen overlay) */}
+            <div
+                className={`fixed inset-0 bg-black/60 transition-opacity duration-200 ${isClosing ? 'opacity-0' : 'opacity-100'}`}
+                onClick={onClose}
+            />
 
-                {/* Header */}
-                <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50 shrink-0">
-                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                        {titleIcon && (
-                            <span className="text-dl-accent dark:text-teal-400 shrink-0">
-                                {titleIcon}
-                            </span>
-                        )}
-                        <h2 className="text-base sm:text-lg font-bold text-dl-primary dark:text-white truncate">
+            {/* OS Window */}
+            <div
+                className={`
+                    relative z-10 w-full ${maxWidthClasses[maxWidth]} 
+                    bg-[#1a1a1c] border-2 border-dl-primary
+                    shadow-[0_0_0_1px_rgba(0,0,0,1),10px_10px_0_rgba(0,0,0,0.5)] 
+                    flex flex-col max-h-[90dvh]
+                    transition-all duration-200 transform
+                    font-mono
+                    ${isClosing ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}
+                `}
+            >
+                {/* Window Header */}
+                <div className="flex items-center justify-between px-3 py-2 bg-dl-primary text-black border-b border-dl-primary">
+                    <div className="flex items-center gap-2">
+                        {titleIcon && <div className="text-black">{titleIcon}</div>}
+                        <h3 className="text-sm font-bold uppercase tracking-wider flex items-center">
                             {title}
-                        </h2>
-                        {titleExtra}
+                            {titleExtra}
+                        </h3>
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors shrink-0"
+                        className="w-6 h-6 flex items-center justify-center bg-black text-dl-primary hover:bg-dl-textSec hover:text-black transition-colors"
                     >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>
 
-                {/* Content */}
-                <div className="flex-1 overflow-y-auto">
+                {/* Window Content */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#121214] text-dl-text p-1">
                     {children}
                 </div>
 
-                {/* Footer */}
+                {/* Window Footer */}
                 {footer && (
-                    <div className="px-4 sm:px-5 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 shrink-0">
+                    <div className="px-3 py-2 bg-[#1a1a1c] border-t border-dl-border/30 shrink-0">
                         {footer}
                     </div>
                 )}

@@ -12,7 +12,6 @@ interface InputPanelProps {
   resourcesError: string | null;
   mode: string;
   isRealTime: boolean;
-  historyPanel?: React.ReactNode;
 }
 
 const InputPanel: React.FC<InputPanelProps> = ({
@@ -24,8 +23,7 @@ const InputPanel: React.FC<InputPanelProps> = ({
   resourcesReady,
   resourcesError,
   mode,
-  isRealTime,
-  historyPanel
+  isRealTime
 }) => {
   const { t } = useLanguage();
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
@@ -39,74 +37,46 @@ const InputPanel: React.FC<InputPanelProps> = ({
 
   const isLoading = status === ConversionStatus.LOADING;
   const isOverLimit = input.length > 3500;
-  const canConvert = input.trim() && resourcesReady && !isLoading && !isOverLimit;
-  const showManualButton = !isRealTime || mode === 'HYBRID';
 
   return (
-    <div className="flex-1 flex flex-col relative h-full min-h-[300px] max-h-[50vh] md:max-h-full md:min-h-auto">
+    <div className="flex-1 flex flex-col relative h-full w-full font-mono overflow-hidden">
       {/* Toolbar */}
-      <div className="h-12 border-b border-dl-border dark:border-dl-dark-border flex items-center px-4 bg-white dark:bg-dl-dark-surface shrink-0 justify-between transition-colors">
-        <span className="text-sm font-bold text-dl-accent dark:text-teal-400 uppercase tracking-wide">{t('inputLabel')}</span>
-        <div className="flex items-center gap-2">
+      <div className="h-8 border-b border-[#333] flex items-center px-4 shrink-0 justify-between bg-[#111] relative z-20">
+        <span className="text-xs font-bold text-[#888] uppercase tracking-widest">{t('inputLabel')}_BUFFER</span>
+        <div className="flex items-center gap-4">
           {!resourcesReady && !resourcesError && (
-            <div className="flex items-center gap-2 text-xs text-dl-textSec dark:text-dl-dark-textSec animate-pulse">
-              <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-              <span>{t('resourcesLoading')}</span>
+            <div className="flex items-center gap-2 text-[10px] text-teal-600 animate-pulse uppercase">
+              <span>LOADING_DICT...</span>
             </div>
-          )}
-          {input && (
-            <button
-              onClick={() => { onClear(); textAreaRef.current?.focus(); }}
-              className="p-1.5 text-dl-textSec dark:text-dl-dark-textSec hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
-              title="Clear"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-            </button>
           )}
         </div>
       </div>
 
       {/* Text Area Container */}
-      <div className="flex-1 relative bg-white dark:bg-dl-dark-surface transition-colors">
+      <div className="flex-1 relative bg-crt-base shadow-inner">
         <textarea
           ref={textAreaRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={t('inputPlaceholder')}
-          className="absolute inset-0 w-full h-full p-6 text-xl sm:text-2xl bg-transparent border-none outline-none resize-none font-sans text-dl-text dark:text-gray-100 placeholder:text-gray-300 dark:placeholder:text-gray-600 leading-relaxed"
+          className="absolute inset-0 w-full h-full p-4 text-lg bg-transparent border-none outline-none resize-none font-retro-cjk text-stone-300 placeholder:text-stone-600 leading-relaxed selection:bg-stone-500 selection:text-black focus:bg-[#222]/30 transition-colors"
           spellCheck="false"
         />
       </div>
 
       {/* Footer */}
-      <div className="h-14 border-t border-dl-border dark:border-dl-dark-border flex items-center justify-between px-4 bg-gray-50/30 dark:bg-gray-800/30 shrink-0 transition-colors">
+      <div className="h-10 border-t border-stone-700 flex items-center justify-between px-4 bg-[#1a1a1c] shrink-0 text-xs text-stone-500 relative z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.2)]">
         {/* Left: Character count */}
-        <span className={`text-xs font-medium ${input.length > 3500 ? 'text-red-500' : 'text-gray-400 dark:text-gray-500'}`}>
-          {input.length} / 3500 {t('chars')}
-          {input.length > 3500 && <span className="ml-1">({t('charLimitExceeded')})</span>}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={`${input.length > 3500 ? 'text-red-500 animate-pulse' : ''}`}>
+            CHAR: {input.length.toString().padStart(4, '0')} / 3500
+          </span>
+        </div>
 
-        {/* Center: History button */}
-        {historyPanel}
-
-        {/* Right: Convert button (desktop only) */}
-        <div className="hidden md:block">
-          {showManualButton && (
-            <button
-              onClick={onConvert}
-              disabled={!canConvert}
-              className={`
-                px-6 py-1.5 rounded-lg font-bold text-sm shadow-sm transition-all active:scale-95 flex items-center gap-2
-                ${!canConvert
-                  ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-600 cursor-not-allowed'
-                  : 'bg-dl-accent text-white hover:bg-teal-800 dark:hover:bg-teal-600'}
-              `}
-            >
-              {isLoading && <div className="w-3 h-3 border-2 border-white/50 border-t-white rounded-full animate-spin"></div>}
-              {isLoading ? t('loading') : t('convert')}
-            </button>
-          )}
+        {/* Right: Status */}
+        <div className="text-[10px] uppercase font-bold tracking-widest text-stone-600">
+          STATUS: {isLoading ? 'PROCESSING' : input ? 'READY' : 'IDLE'}
         </div>
       </div>
     </div>

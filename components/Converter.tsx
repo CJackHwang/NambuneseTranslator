@@ -1,25 +1,27 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { useResources } from '../hooks/useResources';
-import { useConverter } from '../hooks/useConverter';
+import { useConverterContext } from '../contexts/ConverterContext';
 import InputPanel from './InputPanel';
 import OutputPanel from './OutputPanel';
 import ProcessDetails from './ProcessDetails';
 import HistoryPanel from './HistoryPanel';
-import { ConversionStatus } from '../types';
-import { HistoryEntry } from '../services/historyService';
 
 const Converter: React.FC = () => {
   const { t } = useLanguage();
-  const { isReady, error: dictError, retry } = useResources();
   const {
     input, setInput,
     result, setResult,
     status, error: convertError,
     mode, setMode,
     isRealTime, setIsRealTime,
-    convert
-  } = useConverter(isReady);
+    convert,
+    resourcesReady,
+    resourcesError: dictError,
+    retryResources: retry,
+    restoreHistory,
+    isHistoryVisible,
+    setHistoryVisible
+  } = useConverterContext();
 
   const [showDetails, setShowDetails] = useState(false);
 
@@ -29,100 +31,100 @@ const Converter: React.FC = () => {
     setResult(null);
   };
 
-  // Restore from history: set input, mode, and trigger translation with correct mode
-  const handleRestoreHistory = (entry: HistoryEntry) => {
-    setInput(entry.input);
-    setMode(entry.mode);
-    // Trigger translation with explicit mode to avoid async state issues
-    convert(entry.input, entry.mode);
-  };
-
   return (
-    <main className="w-full max-w-7xl mx-auto px-4 py-8">
+    <div className="w-full h-full p-4 flex flex-col md:flex-row gap-4 relative overflow-hidden bg-[#0d0d0f]">
+      {/* Background Grid Line Decoration */}
+      <div className="absolute inset-0 z-0 opacity-10 pointer-events-none"
+        style={{ backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)', backgroundSize: '40px 40px' }}>
+      </div>
+
       {/* Resource Loading Errors */}
       {dictError && (
-        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-lg flex items-center justify-between border border-red-200 dark:border-red-900/30 shadow-sm animate-fade-in">
-          <span className="text-sm font-medium">{dictError}</span>
-          <button onClick={retry} className="px-4 py-1.5 bg-white dark:bg-gray-800 rounded shadow-sm text-xs font-bold uppercase hover:bg-red-50 dark:hover:bg-red-900/30 border border-red-100 dark:border-red-900/20">{t('retry')}</button>
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 p-2 bg-red-900/80 border border-red-500 text-red-200 text-xs font-mono rounded shadow flex items-center gap-2">
+          <span>{dictError}</span>
+          <button onClick={retry} className="px-2 py-0.5 bg-red-800 hover:bg-red-700 border border-red-400 uppercase">[RETRY]</button>
         </div>
       )}
 
-      {/* Main Interface */}
-      <div className="bg-white dark:bg-dl-dark-surface rounded-xl shadow-card border border-dl-border dark:border-dl-dark-border flex flex-col md:flex-row min-h-[500px] md:h-[600px] overflow-hidden relative transition-colors">
-        <div className="w-full md:w-1/2 h-full flex flex-col">
-          <InputPanel
-            input={input}
-            setInput={setInput}
-            onConvert={handleManualConvert}
-            onClear={handleClear}
-            status={status}
-            resourcesReady={isReady}
-            resourcesError={dictError}
-            mode={mode}
-            isRealTime={isRealTime}
-            historyPanel={<HistoryPanel onRestore={handleRestoreHistory} />}
-          />
-        </div>
-
-        {/* Mobile Convert Button (Only when not realtime) */}
-        {(!isRealTime || mode === 'HYBRID') && (
-          <div className="md:hidden p-4 bg-white dark:bg-dl-dark-surface border-y border-dl-border dark:border-dl-dark-border flex justify-center sticky bottom-0 z-20 transition-colors">
-            <button
-              onClick={handleManualConvert}
-              disabled={status === ConversionStatus.LOADING || !input.trim() || !isReady || input.length > 3500}
-              className={`
-                    w-full py-3 rounded-lg font-bold shadow-sm transition-all flex items-center justify-center gap-2
-                    ${status === ConversionStatus.LOADING || !input.trim() || input.length > 3500
-                  ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500'
-                  : 'bg-dl-accent text-white active:scale-98 hover:bg-teal-700 dark:hover:bg-teal-600'}
-                `}
-            >
-              {status === ConversionStatus.LOADING ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin"></div>
-                  {t('loading')}
-                </>
-              ) : t('convert')}
-            </button>
+      {/* Left Panel (Input) */}
+      <div className="flex-1 flex flex-col min-h-0 relative z-10 border-r-0 border-b md:border-b-0 md:border-r border-stone-800/50 pb-4 md:pb-0 md:pr-2">
+        <div className="flex items-center justify-between mb-2 px-2 border-b border-stone-800 pb-1">
+          <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest">INPUT_BUFFER</span>
+          <div className="flex gap-1">
+            <div className="w-1.5 h-1.5 rounded-full bg-stone-700"></div>
+            <div className="w-1.5 h-1.5 rounded-full bg-stone-700"></div>
           </div>
-        )}
-
-        <div className="w-full md:w-1/2 h-full flex flex-col">
-          <OutputPanel
-            result={result}
-            status={status}
-            error={convertError}
-            mode={mode}
-            setMode={setMode}
-            isRealTime={isRealTime}
-            setIsRealTime={setIsRealTime}
-            showDetails={showDetails}
-            setShowDetails={setShowDetails}
-          />
+        </div>
+        <div className="flex-1 min-h-0 relative group overflow-hidden">
+          <div className="absolute inset-0 bg-[#151517] rounded border border-stone-800 shadow-inner group-hover:border-stone-700 transition-colors"></div>
+          <div className="relative h-full p-2 crt-flicker overflow-y-auto">
+            <InputPanel
+              input={input}
+              setInput={setInput}
+              onConvert={handleManualConvert}
+              onClear={handleClear}
+              status={status}
+              resourcesReady={resourcesReady}
+              resourcesError={dictError}
+              mode={mode}
+              isRealTime={isRealTime}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Expanded Details Panel */}
+      {/* Center Divider/Decoration (Desktop only) */}
+      <div className="hidden md:flex flex-col items-center justify-center w-4 gap-2 opacity-50">
+        <div className="w-px h-full bg-gradient-to-b from-transparent via-stone-700 to-transparent"></div>
+      </div>
+
+      {/* Right Panel (Output) */}
+      <div className="flex-1 flex flex-col min-h-0 relative z-10 md:pl-2">
+        <div className="flex items-center justify-between mb-2 px-2 border-b border-stone-800 pb-1">
+          <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest">OUTPUT_STREAM</span>
+          <div className="flex gap-1">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-900/50"></div>
+            <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_5px_lime]"></div>
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 relative overflow-hidden">
+          <div className="absolute inset-0 bg-[#08090b] rounded border border-stone-800 shadow-inner"></div>
+          <div className="relative h-full p-2 overflow-y-auto">
+            <OutputPanel
+              result={result}
+              status={status}
+              error={convertError}
+              mode={mode}
+              setMode={setMode}
+              isRealTime={isRealTime}
+              setIsRealTime={setIsRealTime}
+              showDetails={showDetails}
+              setShowDetails={setShowDetails}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* History Panel Overlay - Rendered at root level for proper z-index */}
+      <HistoryPanel
+        isOpen={isHistoryVisible}
+        onClose={() => setHistoryVisible(false)}
+        onRestore={restoreHistory}
+      />
+
+      {/* Expanded Details Panel Overlay */}
       {mode === 'HYBRID' && result && showDetails && (
-        <ProcessDetails processLog={result.processLog} aiError={result.aiError} />
+        <div className="absolute inset-0 z-50 bg-black/95 backdrop-blur-sm p-4 overflow-y-auto font-mono text-xs">
+          <button
+            onClick={() => setShowDetails(false)}
+            className="absolute top-2 right-4 text-stone-500 hover:text-white"
+          >
+            [CLOSE_LOG]
+          </button>
+          <ProcessDetails processLog={result.processLog} aiError={result.aiError} />
+        </div>
       )}
-
-      {/* Footer Info Cards */}
-      <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-6 bg-white dark:bg-dl-dark-surface rounded-xl border border-dl-border dark:border-dl-dark-border shadow-sm hover:shadow-md transition-shadow">
-          <h4 className="font-bold text-dl-primary dark:text-gray-100 mb-2 text-sm">{t('nounAnchorTitle')}</h4>
-          <p className="text-xs text-dl-textSec dark:text-gray-400 leading-relaxed">{t('nounAnchorDesc')}</p>
-        </div>
-        <div className="p-6 bg-white dark:bg-dl-dark-surface rounded-xl border border-dl-border dark:border-dl-dark-border shadow-sm hover:shadow-md transition-shadow">
-          <h4 className="font-bold text-dl-primary dark:text-gray-100 mb-2 text-sm">{t('phoneticKanaTitle')}</h4>
-          <p className="text-xs text-dl-textSec dark:text-gray-400 leading-relaxed">{t('phoneticKanaDesc')}</p>
-        </div>
-        <div className="p-6 bg-white dark:bg-dl-dark-surface rounded-xl border border-dl-border dark:border-dl-dark-border shadow-sm hover:shadow-md transition-shadow">
-          <h4 className="font-bold text-dl-primary dark:text-gray-100 mb-2 text-sm">{t('transliterationTitle')}</h4>
-          <p className="text-xs text-dl-textSec dark:text-gray-400 leading-relaxed">{t('transliterationDesc')}</p>
-        </div>
-      </div>
-    </main>
+    </div>
   );
 };
 

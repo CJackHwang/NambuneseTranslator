@@ -12,50 +12,48 @@ export default {
         extend: {
             fontFamily: {
                 sans: [
-                    'Inter',
+                    '"Share Tech Mono"', // Primary Industrial Font
+                    '"VT323"',
+                    '"Noto Sans TC"',
+                    '"Noto Sans JP"',
                     'ui-sans-serif',
                     'system-ui',
-                    '-apple-system',
-                    'BlinkMacSystemFont',
-                    '"Segoe UI"',
-                    'Roboto',
-                    '"Helvetica Neue"',
-                    'Arial',
-                    '"Noto Sans"',
-                    '"PingFang SC"',
-                    '"Hiragino Sans GB"',
-                    '"Microsoft YaHei"',
-                    '"Noto Sans SC"',
                     'sans-serif',
-                    '"Apple Color Emoji"',
-                    '"Segoe UI Emoji"',
-                    '"Segoe UI Symbol"',
-                    '"Noto Color Emoji"'
                 ],
                 serif: ['"Noto Serif SC"', '"Songti SC"', 'serif'],
-                mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace'],
+                mono: ['"VT323"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
             },
             colors: {
                 dl: {
-                    bg: '#F3F5F7',
-                    surface: '#FFFFFF',
-                    output: '#F7F8FA',
-                    border: '#E3E5E8',
-                    text: '#0F2B46',
-                    textSec: '#64748B',
-                    primary: '#0F2B46',
-                    accent: '#006A6A', // The original Teal for highlights
-                    hover: '#F1F3F6',
+                    bg: '#0D0E15',      // Deep dark screen background
+                    chassis: '#E8E4D9', // Industrial Beige (Device Body)
+                    plate: '#D4CDC0',   // Darker Plate/Bezel
+                    surface: '#1A1C23', // Panel/Component background
+                    output: '#12141C',  // Darker output recess
+                    border: '#2A2F3E',  // Industrial border
+                    text: '#E0E0E0',    // Standard text (off-white)
+                    textSec: '#8592A6', // Secondary text (faded markings)
+                    primary: '#FFB000', // Amber Phosphor (Primary Action/Highlight)
+                    accent: '#00F0FF',  // VFD Cyan (Accents/Scanning lines)
+                    hover: '#232630',   // Hover state
 
-                    // Dark Mode Colors
+                    // CRT/Industrial specifics (Optional usage in custom classes)
+                    crt: {
+                        green: '#33FF00',
+                        amber: '#FFB000',
+                        grid: '#1F2937'
+                    },
+
+                    // Keeping dark mode structure for compatibility if needed, 
+                    // though this theme is inherently dark.
                     dark: {
-                        bg: '#0f172a',
-                        surface: '#1e293b',
-                        output: '#1e293b',
-                        border: '#334155',
-                        text: '#f1f5f9',
-                        textSec: '#94a3b8',
-                        hover: '#334155',
+                        bg: '#050505',
+                        surface: '#0A0A0A',
+                        output: '#000000',
+                        border: '#333333',
+                        text: '#33FF00', // Green Phosphor in "pure" dark mode
+                        textSec: '#008F11',
+                        hover: '#111111',
                     }
                 }
             },
