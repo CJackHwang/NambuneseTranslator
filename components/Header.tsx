@@ -20,7 +20,7 @@ const Header: React.FC<HeaderProps> = ({ isPoweredOn = true, onTogglePower }) =>
           南武正語翻訳機 <span className="text-xs align-top border border-stone-600 rounded px-1 ml-1 text-stone-600 shadow-sm opacity-70">Ver. 2.0</span>
         </h1>
         <span className="text-[10px] font-mono text-stone-500 tracking-[0.2em] font-bold uppercase pl-1 opacity-70">
-          Nambun Electronics Corp.
+          Nambu Electronics Corp.
         </span>
       </div>
 
