@@ -73,8 +73,8 @@ const AppContent: React.FC = () => {
             </div>
           </div>
           <div className="flex gap-4 text-[10px] text-stone-600 font-bold uppercase tracking-wider font-mono">
-            <span>Model: NB-8000</span>
-            <span className="hidden sm:inline">SerNo: 2471-882</span>
+            <span>Model: NB-114514</span>
+            <span className="hidden sm:inline">SerNo: 1919-810</span>
           </div>
         </footer>
       </div>

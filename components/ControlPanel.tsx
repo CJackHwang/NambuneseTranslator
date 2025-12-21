@@ -34,10 +34,18 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ currentView, onViewChange, 
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
 
+    // Track source: 'builtin' for default music, 'tts' for generated audio
+    const BUILTIN_MUSIC_URL = '/data/forgetme 1980.mp3';
+    const [currentSource, setCurrentSource] = useState<'builtin' | 'tts'>('builtin');
+
+    // Determine which audio source to use
+    const currentAudioUrl = currentSource === 'tts' && audioUrl ? audioUrl : BUILTIN_MUSIC_URL;
+    const hasTTSAudio = !!audioUrl;
+
     // Eject / Download Logic
     const [isEjecting, setIsEjecting] = useState(false);
     const handleEject = () => {
-        if (!audioUrl || ttsLoading || isEjecting) return;
+        if (ttsLoading || isEjecting) return;
 
         setIsEjecting(true);
         setIsPlaying(false);
@@ -45,14 +53,26 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ currentView, onViewChange, 
 
         // Simulate mechanical delay
         setTimeout(() => {
-            downloadAudio();
+            // Download based on current source
+            if (currentSource === 'tts' && audioUrl) {
+                downloadAudio();
+            } else {
+                // Download built-in music
+                const link = document.createElement('a');
+                link.href = BUILTIN_MUSIC_URL;
+                link.download = 'forgetme_1980.mp3';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
             setTimeout(() => setIsEjecting(false), 1000);
         }, 800);
     };
 
     // Audio Playback Handler
     const handlePlay = () => {
-        if (!audioUrl) {
+        // If trying to play TTS but no audio yet, generate it
+        if (currentSource === 'tts' && !audioUrl) {
             loadAudio();
             return;
         }
@@ -66,8 +86,24 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ currentView, onViewChange, 
         if (audioRef.current && isPlaying) {
             audioRef.current.pause();
             setIsPlaying(false);
-            // Optional: Rewind logic? For now, Stop = Pause behavior as per typical simple decks, or we can reset current time.
-            // Let's keep it simple: Pause.
+        }
+    };
+
+    // Track Switch Handler (Next/Previous)
+    const handleTrackSwitch = () => {
+        // Stop current playback
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+        }
+        setIsPlaying(false);
+        setProgress(0);
+
+        // Switch source
+        if (currentSource === 'builtin' && hasTTSAudio) {
+            setCurrentSource('tts');
+        } else {
+            setCurrentSource('builtin');
         }
     };
 
@@ -100,13 +136,21 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ currentView, onViewChange, 
         }
     };
 
-    // Auto-play when audioUrl becomes available
+    // Auto-switch to TTS source when it becomes available
     useEffect(() => {
-        if (audioUrl && audioRef.current) {
-            audioRef.current.currentTime = 0;
-            // No auto-play, manual only
+        if (audioUrl && currentSource === 'builtin' && !isPlaying) {
+            // When TTS audio becomes available, auto-switch to it
+            setCurrentSource('tts');
         }
     }, [audioUrl]);
+
+    // Handle source change - update audio element
+    useEffect(() => {
+        if (audioRef.current) {
+            audioRef.current.currentTime = 0;
+            setProgress(0);
+        }
+    }, [currentSource, currentAudioUrl]);
 
     // Track play state & progress
     useEffect(() => {
@@ -138,10 +182,10 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ currentView, onViewChange, 
             audio.removeEventListener('play', onPlay);
             audio.removeEventListener('pause', onPause);
         };
-    }, [audioUrl]);
+    }, [currentAudioUrl]);
 
     const handleScrub = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (!audioRef.current || !audioUrl) return;
+        if (!audioRef.current || !audioRef.current.duration) return;
         e.stopPropagation(); // Prevent play/pause toggle if clicking bar area
         const rect = e.currentTarget.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -186,7 +230,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ currentView, onViewChange, 
         <div className={`w-full bg-[#d6d1c4] rounded-xl border border-stone-400 p-3 md:p-4 shadow-[inset_0_2px_5px_rgba(255,255,255,0.5),5px_5px_15px_rgba(0,0,0,0.2)] relative z-20 bg-noise transition-opacity duration-500`}>
 
             {/* Hidden Audio Element */}
-            <audio ref={audioRef} src={audioUrl || undefined} className="hidden" />
+            <audio ref={audioRef} src={currentAudioUrl} className="hidden" />
 
             {/* Panel Screws */}
             <div className="absolute top-2 left-2 w-3 h-3 md:w-4 md:h-4 rounded-full bg-stone-400 shadow-[inset_1px_1px_2px_rgba(0,0,0,0.5),1px_1px_0_rgba(255,255,255,0.5)] flex items-center justify-center"><div className="w-2 md:w-2.5 h-0.5 bg-stone-600 rotate-45"></div></div>
@@ -261,107 +305,142 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ currentView, onViewChange, 
                         </div>
                     </div>
 
-                    {/* Tape Deck Area */}
-                    <div className="flex gap-1 items-center justify-center bg-[#2a2a2c] p-2 rounded border-t border-white/10 shadow-[inner_0_2px_10px_black] relative w-full lg:w-fit mt-4 lg:mt-0 shrink-0">
-                        {/* Cassette Window */}
-                        <div className={`h-24 w-56 md:w-64 bg-black/80 rounded border border-stone-600/50 relative overflow-hidden flex items-center justify-center group select-none transition-transform duration-700 ${isEjecting ? '-translate-y-2' : 'translate-y-0'}`}>
+                    {/* Tape Deck Area - Redesigned like classic tape deck */}
+                    <div className={`flex flex-col items-center justify-center bg-[#2a2a2c] p-3 rounded border-t border-white/10 shadow-[inner_0_2px_10px_black] relative w-full lg:w-auto mt-4 lg:mt-0 shrink-0 ${!isPoweredOn ? 'pointer-events-none' : ''}`}>
+                        {/* Top Row: Cassette Window + Counter */}
+                        <div className="flex gap-2 items-center">
+                            {/* Cassette Window */}
+                            <div className={`h-24 w-56 md:w-64 bg-black/80 rounded border border-stone-600/50 relative overflow-hidden flex items-center justify-center group select-none transition-transform duration-700 ${isEjecting ? '-translate-y-2' : 'translate-y-0'}`}>
 
-                            {/* Tape Mechanics Background */}
-                            <div className="absolute inset-0 opacity-30 bg-[repeating-linear-gradient(90deg,transparent_0px,transparent_2px,#111_3px)]"></div>
+                                {/* Tape Mechanics Background */}
+                                <div className="absolute inset-0 opacity-30 bg-[repeating-linear-gradient(90deg,transparent_0px,transparent_2px,#111_3px)]"></div>
 
-                            {/* Tape Reels Visual - Left */}
-                            <div className={`absolute top-4 left-6 w-14 h-14 rounded-full border border-stone-700/50 flex items-center justify-center ${isPlaying ? 'animate-spin' : ''} duration-[3s] shadow-[0_2px_5px_black]`}>
-                                {/* Tape Pack (Simulated) */}
-                                <div className="absolute inset-0.5 rounded-full bg-gradient-to-r from-[#3e2b20] to-[#2a1a10] opacity-90 shadow-inner"></div>
-                                {/* Reel Hub */}
-                                <div className="absolute w-8 h-8 bg-stone-200 rounded-full flex items-center justify-center shadow-md border border-stone-300 z-10">
-                                    <div className="absolute w-1.5 h-full bg-stone-300 rotate-0"></div>
-                                    <div className="absolute w-1.5 h-full bg-stone-300 rotate-60"></div>
-                                    <div className="absolute w-1.5 h-full bg-stone-300 rotate-120"></div>
-                                    <div className="w-2.5 h-2.5 bg-black rounded-full z-20 shadow-inner"></div>
-                                </div>
-                            </div>
-
-                            {/* Tape Reels Visual - Right */}
-                            <div className={`absolute top-4 right-6 w-14 h-14 rounded-full border border-stone-700/50 flex items-center justify-center ${isPlaying ? 'animate-spin' : ''} duration-[3s] shadow-[0_2px_5px_black]`}>
-                                {/* Tape Pack (Simulated - often smaller if playing, but static here implies full/ready) */}
-                                <div className="absolute inset-0.5 rounded-full bg-gradient-to-r from-[#3e2b20] to-[#2a1a10] opacity-90 shadow-inner"></div>
-                                {/* Reel Hub */}
-                                <div className="absolute w-8 h-8 bg-stone-200 rounded-full flex items-center justify-center shadow-md border border-stone-300 z-10">
-                                    <div className="absolute w-1.5 h-full bg-stone-300 rotate-0"></div>
-                                    <div className="absolute w-1.5 h-full bg-stone-300 rotate-60"></div>
-                                    <div className="absolute w-1.5 h-full bg-stone-300 rotate-120"></div>
-                                    <div className="w-2.5 h-2.5 bg-black rounded-full z-20 shadow-inner"></div>
-                                </div>
-                            </div>
-
-                            {/* Tape Label Central */}
-                            <div className="absolute inset-x-0 top-[40px] flex flex-col items-center z-10">
-                                <span className={`text-[8px] font-mono tracking-widest uppercase mb-1 ${ttsLoading || isEjecting ? 'text-amber-500 animate-pulse' : 'text-stone-500'}`}>
-                                    {ttsLoading ? 'GENERATING...' : isEjecting ? 'EJECTING...' : audioUrl ? (isPlaying ? 'PLAYING' : 'READY') : 'NO_TAPE'}
-                                </span>
-                            </div>
-
-                            {/* Progress Bar (Integrated at Bottom) */}
-                            {audioUrl && !isEjecting && (
-                                <div
-                                    className="absolute bottom-2 left-4 right-4 h-2 group/scrub cursor-pointer flex items-end z-20"
-                                    onClick={handleScrub}
-                                >
-                                    <div className="w-full h-full bg-neutral-900/80 rounded-[1px] relative overflow-hidden border border-stone-700 shadow-[inset_0_1px_2px_black]">
-                                        <div style={{ width: `${progress}%` }} className="h-full bg-amber-600 shadow-[0_0_5px_orange] transition-all duration-100 ease-linear opacity-80"></div>
-                                        {/* Tick marks */}
-                                        <div className="absolute inset-0 bg-[repeating-linear-gradient(90deg,transparent_0,transparent_19%,rgba(255,255,255,0.1)_20%)] bg-[length:5px_100%] pointer-events-none"></div>
+                                {/* Tape Reels Visual - Left */}
+                                <div className={`absolute top-4 left-6 w-14 h-14 rounded-full border border-stone-700/50 flex items-center justify-center ${isPlaying ? 'animate-spin' : ''} duration-[3s] shadow-[0_2px_5px_black]`}>
+                                    {/* Tape Pack (Simulated) */}
+                                    <div className="absolute inset-0.5 rounded-full bg-gradient-to-r from-[#3e2b20] to-[#2a1a10] opacity-90 shadow-inner"></div>
+                                    {/* Reel Hub */}
+                                    <div className="absolute w-8 h-8 bg-stone-200 rounded-full flex items-center justify-center shadow-md border border-stone-300 z-10">
+                                        <div className="absolute w-1.5 h-full bg-stone-300 rotate-0"></div>
+                                        <div className="absolute w-1.5 h-full bg-stone-300 rotate-60"></div>
+                                        <div className="absolute w-1.5 h-full bg-stone-300 rotate-120"></div>
+                                        <div className="w-2.5 h-2.5 bg-black rounded-full z-20 shadow-inner"></div>
                                     </div>
                                 </div>
-                            )}
 
-                            {/* Glass Reflection */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none rounded"></div>
+                                {/* Tape Reels Visual - Right */}
+                                <div className={`absolute top-4 right-6 w-14 h-14 rounded-full border border-stone-700/50 flex items-center justify-center ${isPlaying ? 'animate-spin' : ''} duration-[3s] shadow-[0_2px_5px_black]`}>
+                                    {/* Tape Pack (Simulated - often smaller if playing, but static here implies full/ready) */}
+                                    <div className="absolute inset-0.5 rounded-full bg-gradient-to-r from-[#3e2b20] to-[#2a1a10] opacity-90 shadow-inner"></div>
+                                    {/* Reel Hub */}
+                                    <div className="absolute w-8 h-8 bg-stone-200 rounded-full flex items-center justify-center shadow-md border border-stone-300 z-10">
+                                        <div className="absolute w-1.5 h-full bg-stone-300 rotate-0"></div>
+                                        <div className="absolute w-1.5 h-full bg-stone-300 rotate-60"></div>
+                                        <div className="absolute w-1.5 h-full bg-stone-300 rotate-120"></div>
+                                        <div className="w-2.5 h-2.5 bg-black rounded-full z-20 shadow-inner"></div>
+                                    </div>
+                                </div>
+
+                                {/* Tape Label Central */}
+                                <div className="absolute inset-x-0 top-[38px] flex flex-col items-center z-10">
+                                    <span className={`text-[8px] font-mono tracking-widest uppercase mb-0.5 ${ttsLoading || isEjecting ? 'text-amber-500 animate-pulse' : 'text-stone-500'}`}>
+                                        {ttsLoading ? 'GENERATING...' : isEjecting ? 'EJECTING...' : isPlaying ? 'PLAYING' : 'READY'}
+                                    </span>
+                                    <span className={`text-[7px] font-mono tracking-wider text-stone-400 truncate max-w-[140px] ${currentSource === 'tts' ? 'text-amber-400' : 'text-cyan-400'}`}>
+                                        {currentSource === 'tts' ? 'TTS_AUDIO' : 'FORGETME_1980'}
+                                    </span>
+                                </div>
+
+                                {/* Progress Bar (Integrated at Bottom) - Always visible */}
+                                {!isEjecting && (
+                                    <div
+                                        className="absolute bottom-2 left-4 right-4 h-2 group/scrub cursor-pointer flex items-end z-20"
+                                        onClick={handleScrub}
+                                    >
+                                        <div className="w-full h-full bg-neutral-900/80 rounded-[1px] relative overflow-hidden border border-stone-700 shadow-[inset_0_1px_2px_black]">
+                                            <div style={{ width: `${progress}%` }} className={`h-full shadow-[0_0_5px_orange] transition-all duration-100 ease-linear opacity-80 ${currentSource === 'tts' ? 'bg-amber-600' : 'bg-cyan-600'}`}></div>
+                                            {/* Tick marks */}
+                                            <div className="absolute inset-0 bg-[repeating-linear-gradient(90deg,transparent_0,transparent_19%,rgba(255,255,255,0.1)_20%)] bg-[length:5px_100%] pointer-events-none"></div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Glass Reflection */}
+                                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none rounded"></div>
+                            </div>
+
+                            {/* Digital Counter */}
+                            <div className="h-20 w-16 bg-black rounded-[2px] border border-stone-600/50 flex flex-col items-center justify-center shadow-[inset_0_2px_5px_black] relative overflow-hidden">
+                                <span className="text-[6px] text-stone-600 uppercase tracking-widest mb-1 font-mono">COUNTER</span>
+                                <div className="font-mono text-xl text-red-600 font-bold tracking-widest text-shadow-glow">
+                                    {String(Math.floor(progress * 10)).padStart(3, '0')}
+                                </div>
+                                <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white/5 pointer-events-none"></div>
+                            </div>
                         </div>
 
-                        {/* Middle Controls (Play/Eject) */}
-                        {/* Middle Controls (Play/Stop/Eject) - Stacked */}
-                        <div className={`flex flex-col gap-1 mx-2 ${!isPoweredOn ? 'pointer-events-none' : ''}`}>
+                        {/* Bottom Row: Transport Controls - Horizontal like classic tape deck */}
+                        <div className="flex gap-1.5 mt-2">
+                            {/* REC (Generate TTS) */}
+                            <button
+                                onClick={() => { if (result?.fullKana) loadAudio(); }}
+                                disabled={!result?.fullKana || ttsLoading || isEjecting}
+                                title="Generate TTS"
+                                className={`w-12 h-9 bg-[#d8d8d8] rounded-[2px] shadow-[0_2px_3px_black,inset_0_1px_0_white] flex items-center justify-center active:translate-y-0.5 active:shadow-[inset_0_1px_2px_black] transition-transform border border-stone-400 ${ttsLoading ? 'animate-pulse' : ''}`}
+                            >
+                                {/* REC icon: red circle */}
+                                <div className={`w-4 h-4 rounded-full ${result?.fullKana ? 'bg-red-600' : 'bg-stone-400'} ${ttsLoading ? 'animate-pulse shadow-[0_0_8px_red]' : ''}`}></div>
+                            </button>
+
+                            {/* Play */}
                             <button
                                 onClick={handlePlay}
-                                disabled={!result?.fullKana || ttsLoading || isEjecting || isPlaying}
+                                disabled={ttsLoading || isEjecting || isPlaying}
                                 title="Play"
-                                className={`w-10 h-7 bg-[#d8d8d8] rounded-[2px] shadow-[0_1px_2px_black,inset_0_1px_0_white] flex items-center justify-center active:translate-y-0.5 active:shadow-[inset_0_1px_2px_black] transition-transform border border-stone-400 ${isPlaying ? 'bg-[#c0c0c0] shadow-[inset_0_1px_3px_black]' : ''}`}
+                                className={`w-12 h-9 bg-[#d8d8d8] rounded-[2px] shadow-[0_2px_3px_black,inset_0_1px_0_white] flex items-center justify-center active:translate-y-0.5 active:shadow-[inset_0_1px_2px_black] transition-transform border border-stone-400 ${isPlaying ? 'bg-[#c0c0c0] shadow-[inset_0_1px_3px_black] translate-y-0.5' : ''}`}
                             >
-                                <div className={`w-0 h-0 border-l-[8px] border-l-stone-800 border-t-[5px] border-t-transparent border-b-[5px] border-b-transparent ml-0.5 ${ttsLoading ? 'animate-pulse opacity-50' : ''}`}></div>
+                                <div className={`w-0 h-0 border-l-[10px] border-l-stone-800 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent ml-0.5 ${ttsLoading ? 'animate-pulse opacity-50' : ''}`}></div>
                             </button>
 
+                            {/* Stop */}
                             <button
                                 onClick={handleStop}
-                                disabled={!result?.fullKana || ttsLoading || isEjecting || !isPlaying}
+                                disabled={ttsLoading || isEjecting || !isPlaying}
                                 title="Stop"
-                                className="w-10 h-7 bg-[#d8d8d8] rounded-[2px] shadow-[0_1px_2px_black,inset_0_1px_0_white] flex items-center justify-center active:translate-y-0.5 active:shadow-[inset_0_1px_2px_black] transition-transform border border-stone-400"
+                                className="w-12 h-9 bg-[#d8d8d8] rounded-[2px] shadow-[0_2px_3px_black,inset_0_1px_0_white] flex items-center justify-center active:translate-y-0.5 active:shadow-[inset_0_1px_2px_black] transition-transform border border-stone-400"
                             >
-                                <div className="w-3 h-3 bg-stone-800 rounded-[1px]"></div>
+                                <div className="w-4 h-4 bg-stone-800 rounded-[1px]"></div>
                             </button>
 
+                            {/* Skip Track */}
+                            <button
+                                onClick={handleTrackSwitch}
+                                disabled={ttsLoading || isEjecting}
+                                title="Skip Track"
+                                className="w-12 h-9 bg-[#d8d8d8] rounded-[2px] shadow-[0_2px_3px_black,inset_0_1px_0_white] flex items-center justify-center active:translate-y-0.5 active:shadow-[inset_0_1px_2px_black] transition-transform border border-stone-400"
+                            >
+                                {/* Skip/Next icon: two triangles + bar */}
+                                <div className="flex items-center gap-[1px]">
+                                    <div className="w-0 h-0 border-l-[6px] border-l-stone-800 border-t-[4px] border-t-transparent border-b-[4px] border-b-transparent"></div>
+                                    <div className="w-0 h-0 border-l-[6px] border-l-stone-800 border-t-[4px] border-t-transparent border-b-[4px] border-b-transparent"></div>
+                                    <div className="w-[2px] h-[8px] bg-stone-800"></div>
+                                </div>
+                            </button>
+
+                            {/* Eject / Download */}
                             <button
                                 onClick={handleEject}
-                                disabled={!result?.fullKana || ttsLoading || isEjecting}
+                                disabled={ttsLoading || isEjecting}
                                 title="Eject / Download"
-                                className="w-10 h-7 bg-[#d8d8d8] rounded-[2px] shadow-[0_1px_2px_black,inset_0_1px_0_white] flex items-center justify-center active:translate-y-0.5 active:shadow-[inset_0_1px_2px_black] transition-transform border border-stone-400 group/eject"
+                                className="w-12 h-9 bg-[#d8d8d8] rounded-[2px] shadow-[0_2px_3px_black,inset_0_1px_0_white] flex items-center justify-center active:translate-y-0.5 active:shadow-[inset_0_1px_2px_black] transition-transform border border-stone-400 group/eject"
                             >
-                                <div className="border-b-2 border-stone-800 w-4 h-3 flex justify-center items-end pb-0.5 group-active/eject:translate-y-[1px]">
-                                    <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[6px] border-b-stone-800 mb-0.5"></div>
+                                {/* Eject icon: triangle pointing up + bar */}
+                                <div className="flex flex-col items-center gap-0.5 group-active/eject:translate-y-[1px]">
+                                    <div className="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-b-[7px] border-b-stone-800"></div>
+                                    <div className="w-4 h-[2px] bg-stone-800"></div>
                                 </div>
                             </button>
                         </div>
-
-                        {/* Right: Digital Counter (Filler) */}
-                        <div className="h-20 w-20 bg-black rounded-[2px] border border-stone-600/50 flex flex-col items-center justify-center shadow-[inset_0_2px_5px_black] relative overflow-hidden">
-                            <span className="text-[6px] text-stone-600 uppercase tracking-widest mb-1 font-mono">COUNTER</span>
-                            <div className="font-mono text-xl text-red-600 font-bold tracking-widest text-shadow-glow">
-                                {String(Math.floor(progress * 10)).padStart(3, '0')}
-                            </div>
-                            <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white/5 pointer-events-none"></div>
-                        </div>
-
                     </div>
 
                 </div>
@@ -532,8 +611,8 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ currentView, onViewChange, 
                     </div>
 
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 

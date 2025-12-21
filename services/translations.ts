@@ -140,7 +140,7 @@ export const TRANSLATIONS = {
     close: "隐藏",
     disclaimer: "本项目基于虚构的「南武民主共和国」世界观，所有机构名称、设定均为创作虎构，与现实世界无关。",
     // History
-    history: "历史记录",
+    history: "历史",
     clearHistory: "清空",
     noHistory: "暂无翻译历史",
     deleteEntry: "删除",
@@ -158,7 +158,7 @@ export const TRANSLATIONS = {
     copyResult: "复制结果",
     settings: "设置",
     manual: "说明书",
-    execute: "执行",
+    execute: "翻译",
     hanlpInfo: "使用 HanLP 词性标注进行精确的名词/代词/数词提取。无需 API 密钥。",
   },
   ja: {
