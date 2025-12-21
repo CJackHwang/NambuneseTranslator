@@ -27,6 +27,10 @@ export const useConverter = (resourcesReady: boolean) => {
     // Use override mode if provided (for history restore), otherwise use current state
     const effectiveMode = overrideMode ?? mode;
 
+    // Start loading state with a minimum display time
+    const loadingStartTime = Date.now();
+    const MINIMUM_LOADING_TIME = 300; // Minimum 300ms so user can see BUSY LED
+
     setStatus(ConversionStatus.LOADING);
     setError(null);
 
@@ -41,6 +45,13 @@ export const useConverter = (resourcesReady: boolean) => {
           data = await convertHybrid(text);
           break;
       }
+
+      // Ensure minimum loading time for visual feedback
+      const elapsed = Date.now() - loadingStartTime;
+      if (elapsed < MINIMUM_LOADING_TIME) {
+        await new Promise(resolve => setTimeout(resolve, MINIMUM_LOADING_TIME - elapsed));
+      }
+
       setResult(data);
       setStatus(ConversionStatus.SUCCESS);
 

@@ -114,7 +114,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
                     </div>
                     {settings.provider === 'HANLP' && (
                         <div className="text-[10px] text-stone-400 bg-stone-900/50 p-3 border-l-2 border-stone-500 leading-relaxed font-mono">
-                            <span className="font-bold text-stone-300">INFO:</span> 使用 HanLP 词性标注进行精确的名词/代词/数词提取。无需 API 密钥。
+                            <span className="font-bold text-stone-300">INFO:</span> {t('hanlpInfo')}
                         </div>
                     )}
                 </div>
