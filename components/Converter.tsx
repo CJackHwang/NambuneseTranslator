@@ -114,15 +114,11 @@ const Converter: React.FC = () => {
 
       {/* Expanded Details Panel Overlay */}
       {mode === 'HYBRID' && result && showDetails && (
-        <div className="absolute inset-0 z-50 bg-black/95 backdrop-blur-sm p-4 overflow-y-auto font-mono text-xs">
-          <button
-            onClick={() => setShowDetails(false)}
-            className="absolute top-2 right-4 text-stone-500 hover:text-white"
-          >
-            [CLOSE_LOG]
-          </button>
-          <ProcessDetails processLog={result.processLog} aiError={result.aiError} />
-        </div>
+        <ProcessDetails
+          processLog={result.processLog}
+          aiError={result.aiError}
+          onBack={() => setShowDetails(false)}
+        />
       )}
     </div>
   );
